@@ -23,9 +23,9 @@ A minimalistic AI-powered search engine that helps you find information on the i
 - **Weather**: Get the current weather for any location using OpenWeather's API.
 - **Programming**: Run code snippets in multiple languages using E2B's API.
 - **Maps**: Get the location of any place using Google Maps API, Mapbox API, and TripAdvisor API.
-- **YouTube Search**: Search for videos on YouTube and get timestamps and transcripts.
-- **Academic Search**: Search for academic papers.
-- **X Posts Search**: Search for posts on X.com.
+- **YouTube Search**: Search for videos on YouTube and get timestamps and transcripts [powered by Exa.AI - the Web Search API](https://exa.ai/).
+- **Academic Search**: Search for academic papers [powered by Exa.AI - the Web Search API](https://exa.ai/). 
+- **X Posts Search**: Search for posts on X.com [powered by Exa.AI - the Web Search API](https://exa.ai/).
 - **Flight Tracker**: Track flights using AviationStack's API.
 - **Trending Movies and TV Shows**: Get information about trending movies and TV shows.
 - **Movie or TV Show Search**: Get information about any movie or TV show.
@@ -38,13 +38,13 @@ A minimalistic AI-powered search engine that helps you find information on the i
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Vercel AI SDK](https://sdk.vercel.ai/docs)
 - [Shadcn/UI](https://ui.shadcn.com/)
+- [Exa.AI](https://exa.ai/)
 - [Tavily](https://tavily.com/)
 - [OpenWeather](https://openweathermap.org/)
 - [E2B](https://e2b.dev/)
 - [Google Maps](https://developers.google.com/maps)
 - [Mapbox](https://www.mapbox.com/)
 - [TripAdvisor](https://www.tripadvisor.com/)
-- [Exa.AI](https://exa.ai/)
 - [AviationStack](https://aviationstack.com/)
 
 ### Deploy your own
