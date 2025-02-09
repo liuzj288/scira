@@ -17,12 +17,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn, SearchGroup, SearchGroupId, searchGroups } from '@/lib/utils';
 import { TextMorph } from '@/components/core/text-morph';
+import { Upload } from 'lucide-react';
 
 interface ModelSwitcherProps {
     selectedModel: string;
     setSelectedModel: (value: string) => void;
     className?: string;
     showExperimentalModels: boolean;
+    attachments: Array<Attachment>;
+    messages: Array<Message>;
 }
 
 const XAIIcon = ({ className }: { className?: string }) => (
@@ -111,14 +114,19 @@ const getColorClasses = (color: string, isSelected: boolean = false) => {
 }
 
 // Update the ModelSwitcher component's dropdown content
-const ModelSwitcher: React.FC<ModelSwitcherProps> = ({ selectedModel, setSelectedModel, className, showExperimentalModels }) => {
+const ModelSwitcher: React.FC<ModelSwitcherProps> = ({ selectedModel, setSelectedModel, className, showExperimentalModels, attachments, messages }) => {
     const selectedModelData = models.find(model => model.value === selectedModel);
     const [isOpen, setIsOpen] = useState(false);
 
-    // Filter models based on showExperimentalModels prop
-    const filteredModels = models.filter(model => 
-        showExperimentalModels ? true : !model.experimental
+    // Check for attachments in current and previous messages
+    const hasAttachments = attachments.length > 0 || messages.some(msg => 
+        msg.experimental_attachments && msg.experimental_attachments.length > 0
     );
+
+    // Filter models based on attachments first, then experimental status
+    const filteredModels = hasAttachments 
+        ? models.filter(model => model.vision) 
+        : models.filter(model => showExperimentalModels ? true : !model.experimental);
 
     // Group filtered models by category
     const groupedModels = filteredModels.reduce((acc, model) => {
@@ -129,6 +137,11 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({ selectedModel, setSelecte
         acc[category].push(model);
         return acc;
     }, {} as Record<string, typeof models>);
+
+    // Only show divider if we have multiple categories and no attachments
+    const showDivider = (category: string) => {
+        return !hasAttachments && showExperimentalModels && category === "Stable";
+    };
 
     return (
         <DropdownMenu onOpenChange={setIsOpen} modal={false}>
@@ -238,7 +251,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({ selectedModel, setSelecte
                                 </DropdownMenuItem>
                             ))}
                         </div>
-                        {showExperimentalModels && category === "Stable" && (
+                        {showDivider(category) && (
                             <div className="my-1 border-t border-neutral-200 dark:border-neutral-800" />
                         )}
                     </div>
@@ -313,11 +326,18 @@ const PaperclipIcon = ({ size = 16 }: { size?: number }) => {
 };
 
 
-const MAX_IMAGES = 3;
+const MAX_IMAGES = 4;
 
 const hasVisionSupport = (modelValue: string): boolean => {
     const selectedModel = models.find(model => model.value === modelValue);
     return selectedModel?.vision === true
+};
+
+const truncateFilename = (filename: string, maxLength: number = 20) => {
+    if (filename.length <= maxLength) return filename;
+    const extension = filename.split('.').pop();
+    const name = filename.substring(0, maxLength - 4);
+    return `${name}...${extension}`;
 };
 
 const AttachmentPreview: React.FC<{ attachment: Attachment | UploadingAttachment, onRemove: () => void, isUploading: boolean }> = ({ attachment, onRemove, isUploading }) => {
@@ -387,7 +407,9 @@ const AttachmentPreview: React.FC<{ attachment: Attachment | UploadingAttachment
             )}
             <div className="flex-grow min-w-0">
                 {!isUploadingAttachment(attachment) && (
-                    <p className="text-sm font-medium truncate text-neutral-800 dark:text-neutral-200">{attachment.name}</p>
+                    <p className="text-sm font-medium truncate text-neutral-800 dark:text-neutral-200">
+                        {truncateFilename(attachment.name)}
+                    </p>
                 )}
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
                     {isUploadingAttachment(attachment)
@@ -621,12 +643,14 @@ const FormComponent: React.FC<FormComponentProps> = ({
     selectedGroup,
     setSelectedGroup,
     showExperimentalModels,
+    messages,
 }) => {
     const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
     const isMounted = useRef(true);
     const { width } = useWindowSize();
     const postSubmitFileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     const MIN_HEIGHT = 72;
     const MAX_HEIGHT = 400;
@@ -641,6 +665,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
     };
 
     const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        event.preventDefault();
         setInput(event.target.value);
         autoResizeInput(event.target);
     };
@@ -713,6 +738,114 @@ const FormComponent: React.FC<FormComponentProps> = ({
         setAttachments(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (attachments.length >= MAX_IMAGES) return;
+        
+        if (e.dataTransfer.items && e.dataTransfer.items[0].kind === "file") {
+            setIsDragging(true);
+        }
+    }, [attachments.length]);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    }, []);
+
+    const getFirstVisionModel = useCallback(() => {
+        return models.find(model => model.vision)?.value || selectedModel;
+    }, [selectedModel]);
+
+    const handleDrop = useCallback(async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const files = Array.from(e.dataTransfer.files).filter(file => 
+            file.type.startsWith('image/')
+        );
+
+        if (files.length === 0) {
+            toast.error("Only image files are supported");
+            return;
+        }
+
+        const totalAttachments = attachments.length + files.length;
+        if (totalAttachments > MAX_IMAGES) {
+            toast.error(`You can only attach up to ${MAX_IMAGES} images.`);
+            return;
+        }
+
+        // Switch to vision model if current model doesn't support vision
+        const currentModel = models.find(m => m.value === selectedModel);
+        if (!currentModel?.vision) {
+            const visionModel = getFirstVisionModel();
+            setSelectedModel(visionModel);
+            toast.success(`Switched to ${models.find(m => m.value === visionModel)?.label} for image support`);
+        }
+
+        setUploadQueue(files.map((file) => file.name));
+
+        try {
+            const uploadPromises = files.map((file) => uploadFile(file));
+            const uploadedAttachments = await Promise.all(uploadPromises);
+            setAttachments((currentAttachments) => [
+                ...currentAttachments,
+                ...uploadedAttachments,
+            ]);
+        } catch (error) {
+            console.error("Error uploading files!", error);
+            toast.error("Failed to upload one or more files. Please try again.");
+        } finally {
+            setUploadQueue([]);
+        }
+    }, [attachments.length, setAttachments, uploadFile, selectedModel, setSelectedModel, getFirstVisionModel]);
+
+    const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+        const items = Array.from(e.clipboardData.items);
+        const imageItems = items.filter(item => item.type.startsWith('image/'));
+        
+        if (imageItems.length === 0) return;
+        
+        // Prevent default paste behavior if there are images
+        e.preventDefault();
+        
+        const totalAttachments = attachments.length + imageItems.length;
+        if (totalAttachments > MAX_IMAGES) {
+            toast.error(`You can only attach up to ${MAX_IMAGES} images.`);
+            return;
+        }
+
+        // Switch to vision model if needed
+        const currentModel = models.find(m => m.value === selectedModel);
+        if (!currentModel?.vision) {
+            const visionModel = getFirstVisionModel();
+            setSelectedModel(visionModel);
+            toast.success(`Switched to ${models.find(m => m.value === visionModel)?.label} for image support`);
+        }
+
+        setUploadQueue(imageItems.map((_, i) => `Pasted Image ${i + 1}`));
+
+        try {
+            const files = imageItems.map(item => item.getAsFile()).filter(Boolean) as File[];
+            const uploadPromises = files.map(file => uploadFile(file));
+            const uploadedAttachments = await Promise.all(uploadPromises);
+            
+            setAttachments(currentAttachments => [
+                ...currentAttachments,
+                ...uploadedAttachments,
+            ]);
+            
+            toast.success('Image pasted successfully');
+        } catch (error) {
+            console.error("Error uploading pasted files!", error);
+            toast.error("Failed to upload pasted image. Please try again.");
+        } finally {
+            setUploadQueue([]);
+        }
+    }, [attachments.length, setAttachments, uploadFile, selectedModel, setSelectedModel, getFirstVisionModel]);
 
     useEffect(() => {
         if (!isLoading && hasSubmitted && inputRef.current) {
@@ -772,15 +905,61 @@ const FormComponent: React.FC<FormComponentProps> = ({
         }
     }, [attachments.length, hasSubmitted, fileInputRef]);
 
-    return (
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            if (isLoading) {
+                toast.error("Please wait for the response to complete!");
+            } else {
+                submitForm();
+                if (width && width > 768) {
+                    setTimeout(() => {
+                        inputRef.current?.focus();
+                    }, 100);
+                }
+            }
+        }
+    };
 
-        <div className={cn(
-            "relative w-full flex flex-col gap-2 rounded-lg transition-all duration-300 !font-sans",
-            hasSubmitted ?? "z-[51]",
-            attachments.length > 0 || uploadQueue.length > 0
-                ? "bg-gray-100/70 dark:bg-neutral-800 p-1"
-                : "bg-transparent"
-        )}>
+    return (
+        <div 
+            className={cn(
+                "relative w-full flex flex-col gap-2 rounded-lg transition-all duration-300 !font-sans",
+                hasSubmitted ?? "z-[51]",
+                isDragging && "ring-1 ring-neutral-300 dark:ring-neutral-700",
+                attachments.length > 0 || uploadQueue.length > 0
+                    ? "bg-gray-100/70 dark:bg-neutral-800 p-1"
+                    : "bg-transparent"
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            <AnimatePresence>
+                {isDragging && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 backdrop-blur-[2px] bg-background/80 dark:bg-neutral-900/80 rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center z-50 m-2"
+                    >
+                        <div className="flex items-center gap-4 px-6 py-8">
+                            <div className="p-3 rounded-full bg-neutral-100 dark:bg-neutral-800 shadow-sm">
+                                <Upload className="h-6 w-6 text-neutral-600 dark:text-neutral-400" />
+                            </div>
+                            <div className="space-y-1 text-center">
+                                <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
+                                    Drop images here
+                                </p>
+                                <p className="text-xs text-neutral-500 dark:text-neutral-500">
+                                    Max {MAX_IMAGES} images
+                                </p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <input type="file" className="hidden" ref={fileInputRef} multiple onChange={handleFileChange} accept="image/*" tabIndex={-1} />
             <input type="file" className="hidden" ref={postSubmitFileInputRef} multiple onChange={handleFileChange} accept="image/*" tabIndex={-1} />
 
@@ -820,10 +999,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     disabled={isLoading}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
-                    onTouchStart={(e) => {
-                        e.stopPropagation();
-                        inputRef.current?.focus();
-                    }}
                     className={cn(
                         "min-h-[72px] w-full resize-none rounded-lg",
                         "text-base leading-relaxed",
@@ -835,25 +1010,17 @@ const FormComponent: React.FC<FormComponentProps> = ({
                         "focus:!ring-1 focus:!ring-neutral-300 dark:focus:!ring-neutral-600",
                         "px-4 pt-4 pb-16",
                         "overflow-y-auto",
+                        "touch-manipulation",
                     )}
                     style={{
                         maxHeight: `${MAX_HEIGHT}px`,
+                        WebkitUserSelect: 'text',
+                        WebkitTouchCallout: 'none',
                     }}
                     rows={1}
-                    autoFocus
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                            event.preventDefault();
-                            if (isLoading) {
-                                toast.error("Please wait for the response to complete!");
-                            } else {
-                                submitForm();
-                                setTimeout(() => {
-                                    inputRef.current?.focus();
-                                }, 100);
-                            }
-                        }
-                    }}
+                    autoFocus={width ? width > 768 : true}
+                    onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
                 />
 
                 <div className={cn(
@@ -875,6 +1042,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
                             selectedModel={selectedModel}
                             setSelectedModel={setSelectedModel}
                             showExperimentalModels={showExperimentalModels}
+                            attachments={attachments}
+                            messages={messages}
                         />
                     </div>
 
