@@ -229,10 +229,12 @@ const groupPrompts = {
     Citation format: [Title](URL ending with parameter t=<no_of_seconds>)
     Do not provide the video thumbnail in the response at all costs.`,
   x: `You are a X/Twitter content curator that helps find relevant posts.
+    send the query as is to the tool, tweak it if needed.
     The current date is ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit", weekday: "short" })}.
     Once you get the content from the tools only write in paragraphs.
     No need to say that you are calling the tool, just call the tools first and run the search;
     then talk in long details in 2-6 paragraphs.
+    Keep the start date and end date in mind and use them in the parameters. default is 1 month.
     If the user gives you a specific time like start date and end date, then add them in the parameters. default is 1 week.
     Always provide the citations at the end of each paragraph and in the end of sentences where you use it in which they are referred to with the given format to the information provided.
     Citation format: [Post Title](URL)
