@@ -21,6 +21,7 @@ import {
 } from 'ai';
 import Exa from 'exa-js';
 import { z } from 'zod';
+import { geolocation } from '@vercel/functions';
 
 const scira = customProvider({
     languageModels: {
@@ -161,6 +162,7 @@ const deduplicateByDomainAndUrl = <T extends { url: string }>(items: T[]): T[] =
 export async function POST(req: Request) {
     const { messages, model, group } = await req.json();
     const { tools: activeTools, systemPrompt } = await getGroupConfig(group);
+    const geo = geolocation(req);
 
     console.log("Running with model: ", model.trim());
 
@@ -1346,39 +1348,74 @@ export async function POST(req: Request) {
                     }),
                     datetime: tool({
                         description: 'Get the current date and time in the user\'s timezone',
-                        parameters: z.object({}),
-                        execute: async () => {
+                        parameters: z.object({
+                            // timezone: z.string().optional().describe('The user\'s timezone. If not provided, will use geolocation.')
+                        }),
+                        execute: async ({  }: { }) => {
                             try {
                                 // Get current date and time
                                 const now = new Date();
                                 
-                                // Format date and time in different ways for the UI
+                                // Use geolocation to determine timezone
+                                let userTimezone = 'UTC'; // Default to UTC
+                                
+                                if (geo && geo.latitude && geo.longitude) {
+                                    try {
+                                        // Get timezone from coordinates using Google Maps API
+                                        const tzResponse = await fetch(
+                                            `https://maps.googleapis.com/maps/api/timezone/json?location=${geo.latitude},${geo.longitude}&timestamp=${Math.floor(now.getTime() / 1000)}&key=${serverEnv.GOOGLE_MAPS_API_KEY}`
+                                        );
+                                        
+                                        if (tzResponse.ok) {
+                                            const tzData = await tzResponse.json();
+                                            if (tzData.status === 'OK' && tzData.timeZoneId) {
+                                                userTimezone = tzData.timeZoneId;
+                                                console.log(`Timezone determined from coordinates: ${userTimezone}`);
+                                            } else {
+                                                console.log(`Failed to get timezone from coordinates: ${tzData.status || 'Unknown error'}`);
+                                            }
+                                        } else {
+                                            console.log(`Timezone API request failed with status: ${tzResponse.status}`);
+                                        }
+                                    } catch (error) {
+                                        console.error('Error fetching timezone from coordinates:', error);
+                                    }
+                                } else {
+                                    console.log('No geolocation data available, using UTC');
+                                }
+                                
+                                // Format date and time using the timezone
                                 return {
                                     timestamp: now.getTime(),
                                     iso: now.toISOString(),
+                                    timezone: userTimezone,
                                     formatted: {
-                                        date: now.toLocaleDateString('en-US', {
+                                        date: new Intl.DateTimeFormat('en-US', {
                                             weekday: 'long',
                                             year: 'numeric',
                                             month: 'long',
-                                            day: 'numeric'
-                                        }),
-                                        time: now.toLocaleTimeString('en-US', {
+                                            day: 'numeric',
+                                            timeZone: userTimezone
+                                        }).format(now),
+                                        time: new Intl.DateTimeFormat('en-US', {
                                             hour: '2-digit',
                                             minute: '2-digit',
                                             second: '2-digit',
-                                            hour12: true
-                                        }),
-                                        dateShort: now.toLocaleDateString('en-US', {
+                                            hour12: true,
+                                            timeZone: userTimezone
+                                        }).format(now),
+                                        dateShort: new Intl.DateTimeFormat('en-US', {
                                             month: 'short',
                                             day: 'numeric',
                                             year: 'numeric',
-                                        }),
-                                        timeShort: now.toLocaleTimeString('en-US', {
+                                            timeZone: userTimezone
+                                        }).format(now),
+                                        timeShort: new Intl.DateTimeFormat('en-US', {
                                             hour: '2-digit',
                                             minute: '2-digit',
-                                            hour12: true
-                                        })
+                                            hour12: true,
+                                            timeZone: userTimezone
+                                        }).format(now)
                                     }
                                 };
                             } catch (error) {
