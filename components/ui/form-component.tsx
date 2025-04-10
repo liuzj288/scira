@@ -75,11 +75,11 @@ const MistralIcon = ({ className }: { className?: string }) => (
 );
 
 const models = [
-    { value: "scira-default", label: "Grok 3.0", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's Grok 3.0 model", color: "glossyblack", vision: false, experimental: false, category: "Stable" },
-    { value: "scira-grok-3-mini", label: "Grok 3.0 Mini", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's Grok 3.0 Mini model", color: "glossyblack", vision: false, experimental: false, category: "Stable" },
-    { value: "scira-vision", label: "Grok 2.0 Vision", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's Grok 2.0 Vision model", color: "steel", vision: true, experimental: false, category: "Stable" },
-    { value: "scira-mistral", label: "Mistral Small 3.1", icon: MistralIcon, iconClass: "!text-neutral-300", description: "Mistral's Small 3.1 model", color: "orange", vision: true, experimental: false, category: "Stable" },
-    { value: "scira-cmd-a", label: "Command A", icon: "/cohere.svg", iconClass: "!text-neutral-900 dark:!text-white", description: "Cohere's Command A model", color: "purple", vision: false, experimental: true, category: "Experimental" },
+    { value: "scira-default", label: "Grok 3.0", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's most intelligent model", color: "black", vision: false, experimental: false, category: "Stable" },
+    { value: "scira-grok-3-mini", label: "Grok 3.0 Mini", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's most efficient model", color: "gray", vision: false, experimental: false, category: "Stable" },
+    { value: "scira-vision", label: "Grok 2.0 Vision", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's most advanced vision model", color: "indigo", vision: true, experimental: false, category: "Stable" },
+    // { value: "scira-cmd-a", label: "Command A", icon: "/cohere.svg", iconClass: "!text-neutral-900 dark:!text-white", description: "Cohere's most powerful model", color: "purple", vision: false, experimental: true, category: "Experimental" },
+    { value: "scira-claude", label: "Claude 3.7 Sonnet", icon: "/anthropic.svg", iconClass: "!text-neutral-300", description: "Anthropic's most advanced model", color: "violet", vision: false, experimental: false, category: "Stable" },
 ];
 
 const getColorClasses = (color: string, isSelected: boolean = false) => {
@@ -87,30 +87,26 @@ const getColorClasses = (color: string, isSelected: boolean = false) => {
     const selectedClasses = isSelected ? "!bg-opacity-100 dark:!bg-opacity-100" : "";
 
     switch (color) {
-        case 'glossyblack':
+        case 'black':
             return isSelected
-                ? `${baseClasses} ${selectedClasses} !bg-[#4D4D4D] dark:!bg-[#3A3A3A] !text-white hover:!bg-[#3D3D3D] dark:hover:!bg-[#434343] !border-[#4D4D4D] dark:!border-[#3A3A3A] !ring-[#4D4D4D] dark:!ring-[#3A3A3A] focus:!ring-[#4D4D4D] dark:focus:!ring-[#3A3A3A]`
-                : `${baseClasses} !text-[#4D4D4D] dark:!text-[#E5E5E5] hover:!bg-[#4D4D4D] hover:!text-white dark:hover:!bg-[#3A3A3A] dark:hover:!text-white`;
-        case 'steel':
+                ? `${baseClasses} ${selectedClasses} !bg-[#0F0F0F] dark:!bg-[#0F0F0F] !text-white hover:!bg-[#0F0F0F] dark:hover:!bg-[#0F0F0F] !border-[#0F0F0F] dark:!border-[#0F0F0F]`
+                : `${baseClasses} !text-[#0F0F0F] dark:!text-[#E5E5E5] hover:!bg-[#0F0F0F] hover:!text-white dark:hover:!bg-[#0F0F0F] dark:hover:!text-white`;
+        case 'gray':
             return isSelected
-                ? `${baseClasses} ${selectedClasses} !bg-[#4B82B8] dark:!bg-[#4A7CAD] !text-white hover:!bg-[#3B6C9D] dark:hover:!bg-[#3A6C9D] !border-[#4B82B8] dark:!border-[#4A7CAD] !ring-[#4B82B8] dark:!ring-[#4A7CAD] focus:!ring-[#4B82B8] dark:focus:!ring-[#4A7CAD]`
-                : `${baseClasses} !text-[#4B82B8] dark:!text-[#A7C5E2] hover:!bg-[#4B82B8] hover:!text-white dark:hover:!bg-[#4A7CAD] dark:hover:!text-white`;
-        case 'offgray':
+                ? `${baseClasses} ${selectedClasses} !bg-[#4E4E4E] dark:!bg-[#4E4E4E] !text-white hover:!bg-[#3D3D3D] dark:hover:!bg-[#3D3D3D] !border-[#4E4E4E] dark:!border-[#4E4E4E]`
+                : `${baseClasses} !text-[#4E4E4E] dark:!text-[#E5E5E5] hover:!bg-[#4E4E4E] hover:!text-white dark:hover:!bg-[#4E4E4E] dark:hover:!text-white`;
+        case 'indigo':
             return isSelected
-                ? `${baseClasses} ${selectedClasses} !bg-[#505050] dark:!bg-[#505050] !text-white hover:!bg-[#404040] dark:hover:!bg-[#404040] !border-[#505050] dark:!border-[#505050] !ring-[#505050] dark:!ring-[#505050] focus:!ring-[#505050] dark:focus:!ring-[#505050]`
-                : `${baseClasses} !text-[#505050] dark:!text-[#D0D0D0] hover:!bg-[#505050] hover:!text-white dark:hover:!bg-[#505050] dark:hover:!text-white`;
+                ? `${baseClasses} ${selectedClasses} !bg-[#4F46E5] dark:!bg-[#4F46E5] !text-white hover:!bg-[#4338CA] dark:hover:!bg-[#4338CA] !border-[#4F46E5] dark:!border-[#4F46E5]`
+                : `${baseClasses} !text-[#4F46E5] dark:!text-[#6366F1] hover:!bg-[#4F46E5] hover:!text-white dark:hover:!bg-[#4F46E5] dark:hover:!text-white`;
+        case 'violet':
+            return isSelected
+                ? `${baseClasses} ${selectedClasses} !bg-[#8B5CF6] dark:!bg-[#8B5CF6] !text-white hover:!bg-[#7C3AED] dark:hover:!bg-[#7C3AED] !border-[#8B5CF6] dark:!border-[#8B5CF6]`
+                : `${baseClasses} !text-[#8B5CF6] dark:!text-[#A78BFA] hover:!bg-[#8B5CF6] hover:!text-white dark:hover:!bg-[#8B5CF6] dark:hover:!text-white`;
         case 'purple':
             return isSelected
-                ? `${baseClasses} ${selectedClasses} !bg-[#6366F1] dark:!bg-[#5B54E5] !text-white hover:!bg-[#4F46E5] dark:hover:!bg-[#4B44D5] !border-[#6366F1] dark:!border-[#5B54E5] !ring-[#6366F1] dark:!ring-[#5B54E5] focus:!ring-[#6366F1] dark:focus:!ring-[#5B54E5]`
-                : `${baseClasses} !text-[#6366F1] dark:!text-[#A5A0FF] hover:!bg-[#6366F1] hover:!text-white dark:hover:!bg-[#5B54E5] dark:hover:!text-white`;
-        case 'sapphire':
-            return isSelected
-                ? `${baseClasses} ${selectedClasses} !bg-[#1E3A5C] dark:!bg-[#0D2A4C] !text-white hover:!bg-[#0D2A4C] dark:hover:!bg-[#001A3C] !border-[#1E3A5C] dark:!border-[#0D2A4C] !ring-[#1E3A5C] dark:!ring-[#0D2A4C] focus:!ring-[#1E3A5C] dark:focus:!ring-[#0D2A4C]`
-                : `${baseClasses} !text-[#1E3A5C] dark:!text-[#4D8BCC] hover:!bg-[#1E3A5C] hover:!text-white dark:hover:!bg-[#0D2A4C] dark:hover:!text-white`;
-        case 'orange':
-            return isSelected
-                ? `${baseClasses} ${selectedClasses} !bg-[#E67E22] dark:!bg-[#D35400] !text-white hover:!bg-[#D35400] dark:hover:!bg-[#C44E00] !border-[#E67E22] dark:!border-[#D35400] !ring-[#E67E22] dark:!ring-[#D35400] focus:!ring-[#E67E22] dark:focus:!ring-[#D35400]`
-                : `${baseClasses} !text-[#E67E22] dark:!text-[#F39C12] hover:!bg-[#E67E22] hover:!text-white dark:hover:!bg-[#D35400] dark:hover:!text-white`;
+                ? `${baseClasses} ${selectedClasses} !bg-[#5E5ADB] dark:!bg-[#5E5ADB] !text-white hover:!bg-[#4D49C9] dark:hover:!bg-[#4D49C9] !border-[#5E5ADB] dark:!border-[#5E5ADB]`
+                : `${baseClasses} !text-[#5E5ADB] dark:!text-[#5E5ADB] hover:!bg-[#5E5ADB] hover:!text-white dark:hover:!bg-[#5E5ADB] dark:hover:!text-white`;
         default:
             return isSelected
                 ? `${baseClasses} ${selectedClasses} !bg-neutral-500 dark:!bg-neutral-700 !text-white hover:!bg-neutral-600 dark:hover:!bg-neutral-800 !border-neutral-500 dark:!border-neutral-700`
@@ -205,16 +201,18 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({ selectedModel, setSelecte
                 </span>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-                className="w-[220px] p-1 !font-sans rounded-lg bg-white dark:bg-neutral-900 sm:ml-4 !mt-1.5 sm:m-auto !z-[52] shadow-lg border border-neutral-200 dark:border-neutral-800"
+                className="w-[220px] p-1 !font-sans rounded-lg bg-white dark:bg-neutral-900 !mt-1.5 !z-[52] shadow-lg border border-neutral-200 dark:border-neutral-800 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-700 scrollbar-track-transparent"
                 align="start"
+                side="bottom"
                 sideOffset={8}
             >
                 {Object.entries(groupedModels).map(([category, categoryModels], categoryIndex) => (
                     <div key={category} className={cn(
                         categoryIndex > 0 && "mt-1"
                     )}>
-                        <div className="px-2 py-1.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 select-none">
-                            {category}
+                        <div className="px-2 py-1.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 select-none sticky top-0 bg-white dark:bg-neutral-900 z-10">
+                            {/* {category} */}
+                            Models
                         </div>
                         <div className="space-y-0.5">
                             {categoryModels.map((model) => (
@@ -269,9 +267,9 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({ selectedModel, setSelecte
                                 </DropdownMenuItem>
                             ))}
                         </div>
-                        {showDivider(category) && (
+                        {/* {showDivider(category) && (
                             <div className="my-1 border-t border-neutral-200 dark:border-neutral-800" />
-                        )}
+                        )} */}
                     </div>
                 ))}
             </DropdownMenuContent>
@@ -538,16 +536,16 @@ const SwitchNotification: React.FC<SwitchNotificationProps> = ({
     // Get background color for model notifications only
     const getModelBgClass = (color: string) => {
         switch (color) {
-            case 'glossyblack':
-                return 'bg-[#4D4D4D] dark:bg-[#3A3A3A] border-[#4D4D4D] dark:border-[#3A3A3A]';
-            case 'steel':
-                return 'bg-[#4B82B8] dark:bg-[#4A7CAD] border-[#4B82B8] dark:border-[#4A7CAD]';
+            case 'black':
+                return 'bg-[#0F0F0F] dark:bg-[#0F0F0F] border-[#0F0F0F] dark:border-[#0F0F0F]';
+            case 'gray':
+                return 'bg-[#4E4E4E] dark:bg-[#4E4E4E] border-[#4E4E4E] dark:border-[#4E4E4E]';
+            case 'indigo':
+                return 'bg-[#4F46E5] dark:bg-[#4F46E5] border-[#4F46E5] dark:border-[#4F46E5]';
+            case 'violet':
+                return 'bg-[#8B5CF6] dark:bg-[#8B5CF6] border-[#8B5CF6] dark:border-[#8B5CF6]';
             case 'purple':
-                return 'bg-[#6366F1] dark:bg-[#5B54E5] border-[#6366F1] dark:border-[#5B54E5]';
-            case 'orange':
-                return 'bg-[#E67E22] dark:bg-[#D35400] border-[#E67E22] dark:border-[#D35400]';
-            case 'sapphire':
-                return 'bg-[#4D6BFE] dark:bg-[#4D6BFE] border-[#4D6BFE] dark:border-[#4D6BFE]';
+                return 'bg-[#5E5ADB] dark:bg-[#5E5ADB] border-[#5E5ADB] dark:border-[#5E5ADB]';
             default:
                 return 'bg-neutral-100 dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700';
         }
@@ -770,6 +768,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
     
     const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
     const isMounted = useRef(true);
+    const isCompositionActive = useRef(false)
     const { width } = useWindowSize();
     const postSubmitFileInputRef = useRef<HTMLInputElement>(null);
     const [isFocused, setIsFocused] = useState(true);
@@ -1012,7 +1011,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
                 showSwitchNotification(
                     modelData.label,
                     'Vision model enabled - you can now attach images',
-                    <Image className="size-4" />,
+                    typeof modelData.icon === 'string' ?
+                        <img src={modelData.icon} alt={modelData.label} className="size-4 object-contain" /> :
+                        <modelData.icon className="size-4" />,
                     modelData.color,
                     'model'  // Explicitly mark as model notification
                 );
@@ -1062,7 +1063,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
                 showSwitchNotification(
                     modelData.label,
                     'Vision model enabled - you can now attach images',
-                    <Image className="size-4" />,
+                    typeof modelData.icon === 'string' ?
+                        <img src={modelData.icon} alt={modelData.label} className="size-4 object-contain" /> :
+                        <modelData.icon className="size-4" />,
                     modelData.color,
                     'model'  // Explicitly mark as model notification
                 );
@@ -1160,7 +1163,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
     }, [attachments.length, status, fileInputRef]);
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (event.key === "Enter" && !event.shiftKey) {
+        if (event.key === "Enter" && !event.shiftKey && !isCompositionActive.current) {
             event.preventDefault();
             if (status === 'submitted' || status === 'streaming') {
                 toast.error("Please wait for the response to complete!");
@@ -1291,6 +1294,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
                             }}
                             rows={1}
                             autoFocus={width ? width > 768 : true}
+                            onCompositionStart={() => isCompositionActive.current = true}
+                            onCompositionEnd={() => isCompositionActive.current = false}
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
                         />
