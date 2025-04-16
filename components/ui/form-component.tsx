@@ -20,6 +20,7 @@ import { Upload } from 'lucide-react';
 import { Mountain } from "lucide-react"
 import { UIMessage } from '@ai-sdk/ui-utils';
 import { Globe } from 'lucide-react';
+import { track } from '@vercel/analytics';
 
 interface ModelSwitcherProps {
     selectedModel: string;
@@ -54,6 +55,7 @@ const models = [
     { value: "scira-grok-3-mini", label: "Grok 3.0 Mini", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's most efficient model", color: "gray", vision: false, experimental: false, category: "Stable" },
     { value: "scira-vision", label: "Grok 2.0 Vision", icon: XAIIcon, iconClass: "!text-neutral-300", description: "xAI's most advanced vision model", color: "indigo", vision: true, experimental: false, category: "Stable" },
     { value: "scira-4.1-mini", label: "GPT 4.1 Mini", icon: "/openai.svg", iconClass: "!text-neutral-300", description: "OpenAI's smartest mini model", color: "blue", vision: true, experimental: true, category: "Stable" },
+    { value: "scira-o4-mini", label: "o4 mini", icon: "/openai.svg", iconClass: "!text-neutral-300", description: "OpenAI's mini reasoning model", color: "blue", vision: true, experimental: true, category: "Stable" },
     { value: "scira-qwq", label: "QWQ 32B", icon: "/groq.svg", iconClass: "!text-neutral-300", description: "Alibaba's most advanced model", color: "purple", vision: false, experimental: true, category: "Experimental" },
 ];
 
@@ -1111,6 +1113,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
         }
 
         if (input.trim() || attachments.length > 0) {
+            track('model_selected', {
+                model: selectedModel,
+            });
             setHasSubmitted(true);
             lastSubmittedQueryRef.current = input.trim();
 
