@@ -46,23 +46,26 @@ const preprocessLaTeX = (content: string) => {
     .replace(/\\\(/g, '___INLINE_OPEN___')
     .replace(/\\\)/g, '___INLINE_CLOSE___');
 
-  // Process block equations
-  processedContent = processedContent.replace(
-    /___BLOCK_OPEN___([\s\S]*?)___BLOCK_CLOSE___/g,
-    (_, equation) => `$$${equation.trim()}$$`
-  );
+  // Find and preserve complete LaTeX blocks as-is
+  // For block equations ($$...$$)
+  const blockRegex = /(\$\$[\s\S]*?\$\$)/g;
+  const blocks: string[] = [];
+  
+  processedContent = processedContent.replace(blockRegex, (match) => {
+    const id = blocks.length;
+    blocks.push(match);
+    return `___LATEX_BLOCK_${id}___`;
+  });
 
-  // Process inline equations
-  processedContent = processedContent.replace(
-    /___INLINE_OPEN___([\s\S]*?)___INLINE_CLOSE___/g,
-    (_, equation) => `$${equation.trim()}$`
-  );
-
-  // Handle common LaTeX expressions not wrapped in delimiters
-  processedContent = processedContent.replace(
-    /(\b[A-Z](?:_\{[^{}]+\}|\^[^{}]+|_[a-zA-Z\d]|\^[a-zA-Z\d])+)/g,
-    (match) => `$${match}$`
-  );
+  // For inline equations ($...$) - avoiding currency values
+  const inlineRegex = /(\$(?!\s*\d+[.,\s]*\d*\s*$)(?:[^\$]|\\.)*?\$)/g;
+  const inlines: string[] = [];
+  
+  processedContent = processedContent.replace(inlineRegex, (match) => {
+    const id = inlines.length;
+    inlines.push(match);
+    return `___LATEX_INLINE_${id}___`;
+  });
 
   // Handle any remaining escaped delimiters that weren't part of a complete pair
   processedContent = processedContent
@@ -71,18 +74,116 @@ const preprocessLaTeX = (content: string) => {
     .replace(/___INLINE_OPEN___/g, '\\(')
     .replace(/___INLINE_CLOSE___/g, '\\)');
 
+  // Now restore the LaTeX blocks after other processing
+  processedContent = processedContent.replace(/___LATEX_BLOCK_(\d+)___/g, (_, id) => {
+    return blocks[parseInt(id)];
+  });
+
+  processedContent = processedContent.replace(/___LATEX_INLINE_(\d+)___/g, (_, id) => {
+    return inlines[parseInt(id)];
+  });
+
   return processedContent;
 };
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
-  const citationLinks = useMemo<CitationLink[]>(() => {
-    // Improved regex to better handle various markdown link formats
-    return Array.from(content.matchAll(/\[([^\]]+)\]\(([^)]+)\)/g)).map(match => {
-      const text = match[1]?.trim() || '';
-      const link = match[2]?.trim() || '';
-      return { text, link };
+  // Preprocess content to find and normalize citation links before passing to marked
+  const [processedContent, extractedCitations] = useMemo(() => {
+    const citations: CitationLink[] = [];
+    let modifiedContent = content;
+    
+    // First, protect LaTeX content from citation processing
+    const latexBlocks: string[] = [];
+    const latexPlaceholder = "___LATEX_BLOCK_PLACEHOLDER___";
+    
+    // Replace block and inline LaTeX with placeholders
+    modifiedContent = modifiedContent.replace(/\$\$([\s\S]*?)\$\$/g, (match) => {
+      latexBlocks.push(match);
+      return `${latexPlaceholder}${latexBlocks.length - 1}`;
     });
+    
+    modifiedContent = modifiedContent.replace(/\$(?!\d)(?:\\.|[^$])*?\$(?!\d)/g, (match) => {
+      latexBlocks.push(match);
+      return `${latexPlaceholder}${latexBlocks.length - 1}`;
+    });
+    
+    // Process standard markdown links
+    const stdLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    modifiedContent = modifiedContent.replace(stdLinkRegex, (match, text, url) => {
+      // Skip if it's a LaTeX placeholder
+      if (match.includes(latexPlaceholder)) return match;
+      
+      citations.push({ text, link: url });
+      return `[${text}](${url})`;
+    });
+    
+    // Process references followed by URLs - handles both malformed markdown and natural text references
+    const refWithUrlRegex = /(?:\[(?:(?:\[?(PDF|DOC|HTML)\]?\s+)?([^\]]+))\]|\b([^.!?\n]+?(?:\s+[-–—]\s+\w+|\s+\([^)]+\)))\b)(?:\s*(?:\(|\[\s*|\s+))(https?:\/\/[^\s)]+)(?:\s*[)\]]|\s|$)/g;
+    modifiedContent = modifiedContent.replace(refWithUrlRegex, (match, docType, bracketText, plainText, url) => {
+      // Skip if it contains a LaTeX placeholder
+      if (match.includes(latexPlaceholder)) return match;
+      
+      // Get the reference text - either from brackets or plain text
+      const text = bracketText || plainText;
+      const fullText = (docType ? `[${docType}] ` : '') + text;
+      
+      // Clean up the URL (remove trailing punctuation etc)
+      const cleanUrl = url.replace(/[.,;:]+$/, '');
+      
+      citations.push({ text: fullText.trim(), link: cleanUrl });
+      return `[${fullText.trim()}](${cleanUrl})`;
+    });
+    
+    // Process quoted paper titles followed by site references like "Attention Is All You Need" Transformer - Wikipedia
+    const quotedTitleRegex = /"([^"]+)"(?:\s+([^.!?\n]+?(?:\s+[-–—]\s+(?:Wikipedia|arXiv|GitHub|(?:[A-Z][a-z]+(?:\.[a-z]+)?)))))/g;
+    modifiedContent = modifiedContent.replace(quotedTitleRegex, (match, title, source) => {
+      // Skip if it contains a LaTeX placeholder
+      if (match.includes(latexPlaceholder)) return match;
+      
+      // Determine the likely URL based on the source
+      let url = "";
+      const fullText = match;
+      
+      if (source.includes("Wikipedia")) {
+        // Format for Wikipedia
+        const searchTerm = `${title} ${source.replace(/\s+[-–—]\s+Wikipedia/, "")}`.trim();
+        url = `https://en.wikipedia.org/wiki/${encodeURIComponent(searchTerm.replace(/\s+/g, '_'))}`;
+        citations.push({ text: fullText.trim(), link: url });
+        return `[${fullText.trim()}](${url})`;
+      } else if (source.includes("arXiv")) {
+        // Skip without a specific arXiv ID
+        return match;
+      } else if (source.includes("GitHub")) {
+        // Skip without a specific GitHub URL
+        return match;
+      }
+      
+      return match;
+    });
+    
+    // Process raw URLs to documents
+    const rawUrlRegex = /(https?:\/\/[^\s]+\.(?:pdf|doc|docx|ppt|pptx|xls|xlsx))\b/gi;
+    modifiedContent = modifiedContent.replace(rawUrlRegex, (match, url) => {
+      // Skip if it contains a LaTeX placeholder
+      if (match.includes(latexPlaceholder)) return match;
+      
+      const filename = url.split('/').pop() || url;
+      const alreadyLinked = citations.some(citation => citation.link === url);
+      if (!alreadyLinked) {
+        citations.push({ text: filename, link: url });
+      }
+      return match;
+    });
+    
+    // Restore LaTeX blocks
+    modifiedContent = modifiedContent.replace(new RegExp(`${latexPlaceholder}(\\d+)`, 'g'), (_, index) => {
+      return latexBlocks[parseInt(index)];
+    });
+    
+    return [modifiedContent, citations];
   }, [content]);
+  
+  const citationLinks = extractedCitations;
 
   interface CodeBlockProps {
     language: string | undefined;
@@ -246,7 +347,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
             target="_blank"
             rel="noopener noreferrer"
             className={isCitation
-              ? "cursor-pointer text-xs text-primary py-0.5 px-1.5 m-0 bg-primary/10 dark:bg-primary/20 rounded-full no-underline font-medium"
+              ? "cursor-pointer text-xs text-[#ff8c37] dark:text-[#ff9f57] py-0.5 px-1.25 m-0! bg-[#ff8c37]/10 dark:bg-[#ff9f57]/10 rounded-sm no-underline font-medium inline-flex items-center -translate-y-[1px] leading-none hover:bg-[#ff8c37]/20 dark:hover:bg-[#ff9f57]/20 focus:outline-none focus:ring-1 focus:ring-[#ff8c37] align-baseline"
               : "text-primary dark:text-primary-light no-underline hover:underline font-medium"}
           >
             {text}
@@ -256,7 +357,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
           side="top"
           align="start"
           sideOffset={5}
-          className="w-56 p-0 shadow-xs border border-neutral-200 dark:border-neutral-700 rounded-md overflow-hidden"
+          className="w-64 p-0 shadow-lg border border-[#ff8c37]/30 dark:border-[#ff9f57]/30 rounded-md overflow-hidden bg-white dark:bg-neutral-900"
         >
           <LinkPreview href={href} title={title} />
         </HoverCardContent>
@@ -268,15 +369,26 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 
+  const renderCitation = (index: number, citationText: string, href: string) => {
+    return (
+      <span className="inline-flex items-baseline relative whitespace-normal" key={generateKey()}>
+        {renderHoverCard(href, index + 1, true, citationText)}
+      </span>
+    );
+  };
+
   const renderer: Partial<ReactRenderer> = {
     text(text: string) {
+      // Simple check for any LaTeX content
       if (!text.includes('$')) return text;
+      
       return (
         <Latex
           delimiters={[
             { left: '$$', right: '$$', display: true },
             { left: '$', right: '$', display: false }
           ]}
+          strict={false}
           key={generateKey()}
         >
           {text}
@@ -292,6 +404,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
                 { left: '$$', right: '$$', display: true },
                 { left: '$', right: '$', display: false }
               ]}
+              strict={false}
               key={generateKey()}
             >
               {children}
@@ -309,11 +422,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
       if (citationIndex !== -1) {
         // For citations, show the citation text in the hover card
         const citationText = citationLinks[citationIndex].text;
-        return (
-          <sup key={generateKey()}>
-            {renderHoverCard(href, citationIndex + 1, true, citationText)}
-          </sup>
-        );
+        return renderCitation(citationIndex, citationText, href);
       }
       return isValidUrl(href)
         ? renderHoverCard(href, text)
@@ -414,7 +523,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   return (
     <div className="markdown-body prose prose-neutral dark:prose-invert max-w-none dark:text-neutral-200 font-sans">
       <Marked renderer={renderer}>
-        {content}
+        {processedContent}
       </Marked>
     </div>
   );
