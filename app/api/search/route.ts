@@ -15,7 +15,6 @@ import {
     appendResponseMessages,
     CoreToolMessage,
     CoreAssistantMessage,
-    generateId,
     createDataStream
 } from 'ai';
 import Exa from 'exa-js';
@@ -35,6 +34,7 @@ import { differenceInSeconds } from 'date-fns';
 import { Chat } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { geolocation } from "@vercel/functions";
 
 type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;
 type ResponseMessage = ResponseMessageWithoutId & { id: string };
@@ -341,6 +341,11 @@ interface ExaResult {
 // Modify the POST function to use the new handler
 export async function POST(req: Request) {
     const { messages, model, group, timezone, id, selectedVisibilityType } = await req.json();
+    const { latitude, longitude } = geolocation(req);
+
+    console.log("--------------------------------");
+    console.log("Location: ", latitude, longitude);
+    console.log("--------------------------------");
 
     const user = await getUser();
     const streamId = "stream-" + uuidv4();
@@ -419,11 +424,11 @@ export async function POST(req: Request) {
                 maxSteps: 5,
                 maxRetries: 5,
                 experimental_activeTools: [...activeTools],
-                system: instructions,
+                system: instructions + `\n\nThe user's location is ${latitude}, ${longitude}.`,
                 toolChoice: 'auto',
                 experimental_transform: smoothStream({
                     chunking: 'word',
-                    delayInMs: 15,
+                    delayInMs: 1,
                 }),
                 providerOptions: {
                     google: {
@@ -1528,97 +1533,6 @@ plt.show()`
                         },
                     }),
                     
-                    // Improved text search using Google Places Text Search API
-                    text_place_search: tool({
-                        description: 'Search for places using Google Places Text Search API with optional location bias.',
-                        parameters: z.object({
-                            query: z.string().describe('Search query for places (e.g., "restaurants in Paris", "hotels near Times Square")'),
-                            location: z.string().optional().describe('Optional location to bias the search (e.g., "40.7589,-73.9851" for coordinates or "New York" for city)'),
-                            radius: z.number().optional().describe('Search radius in meters (max 50000). Only used with coordinate location.'),
-                        }),
-                        execute: async ({ query, location, radius }: { query: string; location?: string; radius?: number }) => {
-                            try {
-                                const googleApiKey = serverEnv.GOOGLE_MAPS_API_KEY;
-                                
-                                if (!googleApiKey) {
-                                    throw new Error('Google Maps API key not configured');
-                                }
-
-                                let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${googleApiKey}`;
-
-                                // Add location bias if provided
-                                if (location) {
-                                    // Check if location is coordinates (contains comma and numbers)
-                                    if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location.trim())) {
-                                        url += `&location=${location}`;
-                                        if (radius) {
-                                            url += `&radius=${Math.min(radius, 50000)}`;
-                                        }
-                                    } else {
-                                        // Location is a place name, add as bias
-                                        url += `&location=${encodeURIComponent(location)}`;
-                                    }
-                                }
-
-                                const response = await fetch(url);
-                                const data = await response.json();
-
-                                if (data.status === 'OVER_QUERY_LIMIT') {
-                                    return {
-                                        success: false,
-                                        error: 'Google Places API quota exceeded. Please try again later.',
-                                        places: []
-                                    };
-                                }
-
-                                if (data.status !== 'OK') {
-                                    return {
-                                        success: false,
-                                        error: data.error_message || `Places search failed: ${data.status}`,
-                                        places: []
-                                    };
-                                }
-
-                                const places = data.results.map((place: any) => ({
-                                    place_id: place.place_id,
-                                    name: place.name,
-                                    formatted_address: place.formatted_address,
-                                    location: {
-                                        lat: place.geometry.location.lat,
-                                        lng: place.geometry.location.lng,
-                                    },
-                                    rating: place.rating,
-                                    price_level: place.price_level,
-                                    types: place.types,
-                                    // Removed photos to avoid Google Places Photo API quota limits
-                                    // photos: place.photos?.slice(0, 3).map((photo: any) => ({
-                                    //     photo_reference: photo.photo_reference,
-                                    //     width: photo.width,
-                                    //     height: photo.height,
-                                    //     url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${googleApiKey}`
-                                    // })) || [],
-                                    photos: [], // Empty array to avoid quota issues
-                                    source: 'google_places'
-                                }));
-
-                                return {
-                                    success: true,
-                                    query,
-                                    location_bias: location,
-                                    places,
-                                    count: places.length
-                                };
-                            } catch (error) {
-                                console.error('Text search error:', error);
-                                return {
-                                    success: false,
-                                    error: error instanceof Error ? error.message : 'Unknown text search error',
-                                    places: []
-                                };
-                            }
-                        },
-                    }),
-
                     // Improved nearby search using Google Places Nearby Search API
                     nearby_places_search: tool({
                         description: 'Search for nearby places using Google Places Nearby Search API.',
