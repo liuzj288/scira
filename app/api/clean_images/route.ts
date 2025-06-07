@@ -2,16 +2,14 @@ import { serverEnv } from '@/env/server';
 import { del, list, ListBlobResult } from '@vercel/blob';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
-
 export async function GET(req: NextRequest) {
     if (req.headers.get('Authorization') !== `Bearer ${serverEnv.CRON_SECRET}`) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
     try {
-        await deleteAllBlobsWithPrefix('mplx/public.');
-        return new NextResponse('All public files with mplx/public. prefix were deleted', {
+        await deleteAllBlobsWithPrefix('mplx/public');
+        return new NextResponse('All public files with mplx/public prefix were deleted', {
             status: 200,
         });
     } catch (error) {

@@ -731,11 +731,13 @@ plt.show()`
 
                             console.log('Code:', code);
 
-                            const daytona = new Daytona()
-                            const sandbox = await daytona.create({
-                                image: "scira-analysis:1749032298",
-                                language: 'python',
+                            const daytona = new Daytona({
+                                apiKey: serverEnv.DAYTONA_API_KEY,
                                 target: SandboxTargetRegion.US,
+                            })
+                            const sandbox = await daytona.create({
+                                image: "scira-analysis:1749316515",
+                                language: 'python',
                                 resources: {
                                     cpu: 2,
                                     memory: 5,
@@ -747,13 +749,14 @@ plt.show()`
                             const execution = await sandbox.process.codeRun(code);
                             let message = '';
 
-                            if (execution.result) {
+                            if (execution.result === execution.artifacts?.stdout) {
                                 message += execution.result;
-                            }
-
-
-                            if (execution.artifacts?.stdout) {
+                            } else if (execution.result && execution.result !== execution.artifacts?.stdout) {
+                                message += execution.result;
+                            } else if (execution.artifacts?.stdout && execution.artifacts?.stdout !== execution.result) {
                                 message += execution.artifacts.stdout;
+                            } else {
+                                message += execution.result;
                             }
 
                             console.log("execution exit code: ", execution.exitCode)
@@ -823,11 +826,13 @@ print(f"Converted amount: {converted_amount}")
 `;
                             console.log('Currency pair:', from, to);
 
-                            const daytona = new Daytona()
-                            const sandbox = await daytona.create({
-                                image: "scira-analysis:1749032298",
-                                language: 'python',
+                            const daytona = new Daytona({
+                                apiKey: serverEnv.DAYTONA_API_KEY,
                                 target: SandboxTargetRegion.US,
+                            })
+                            const sandbox = await daytona.create({
+                                image: "scira-analysis:1749316515",
+                                language: 'python',
                                 resources: {
                                     cpu: 2,
                                     memory: 5,
@@ -839,12 +844,14 @@ print(f"Converted amount: {converted_amount}")
                             const execution = await sandbox.process.codeRun(code);
                             let message = '';
 
-                            if (execution.result) {
+                            if (execution.result === execution.artifacts?.stdout) {
                                 message += execution.result;
-                            }
-
-                            if (execution.artifacts?.stdout) {
+                            } else if (execution.result && execution.result !== execution.artifacts?.stdout) {
+                                message += execution.result;
+                            } else if (execution.artifacts?.stdout && execution.artifacts?.stdout !== execution.result) {
                                 message += execution.artifacts.stdout;
+                            } else {
+                                message += execution.result;
                             }
 
                             await sandbox.delete();
@@ -1600,11 +1607,13 @@ print(f"Converted amount: {converted_amount}")
                             console.log('Title:', title);
                             console.log('Icon:', icon);
 
-                            const daytona = new Daytona()
-                            const sandbox = await daytona.create({
-                                image: "scira-analysis:1749032298",
-                                language: 'python',
+                            const daytona = new Daytona({
+                                apiKey: serverEnv.DAYTONA_API_KEY,
                                 target: SandboxTargetRegion.US,
+                            })
+                            const sandbox = await daytona.create({
+                                image: "scira-analysis:1749316515",
+                                language: 'python',
                                 resources: {
                                     cpu: 4,
                                     memory: 8,
@@ -1620,12 +1629,17 @@ print(f"Converted amount: {converted_amount}")
 
                             let message = '';
 
-                            if (execution.result) {
+                            if (execution.artifacts?.stdout === execution.result) {
                                 message += execution.result;
                             }
-
-                            if (execution.artifacts?.stdout) {
+                            else if (execution.result && execution.result !== execution.artifacts?.stdout) {
+                                message += execution.result;
+                            }
+                            else if (execution.artifacts?.stdout && execution.artifacts?.stdout !== execution.result) {
                                 message += execution.artifacts.stdout;
+                            }
+                            else {
+                                message += execution.result;
                             }
 
                             if (execution.artifacts?.charts) {
@@ -2199,7 +2213,7 @@ print(f"Converted amount: {converted_amount}")
                                 const data = await tvly.search(query, {
                                     maxResults: maxResults,
                                     timeRange: timeRange,
-                                    includeRawContent: true,
+                                    includeRawContent: "text",
                                     searchDepth: 'basic',
                                     topic: 'general',
                                     includeDomains: ["reddit.com"],

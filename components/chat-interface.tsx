@@ -59,8 +59,6 @@ const ChatInterface = memo(({ initialChatId, initialMessages, initialVisibility 
     const lastSubmittedQueryRef = useRef(initialState.query);
     const bottomRef = useRef<HTMLDivElement>(null);
     const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
-    const [isEditingMessage, setIsEditingMessage] = useState(false);
-    const [editingMessageIndex, setEditingMessageIndex] = useState(-1);
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -484,12 +482,8 @@ const ChatInterface = memo(({ initialChatId, initialMessages, initialVisibility 
                             <Messages
                                 messages={messages}
                                 lastUserMessageIndex={lastUserMessageIndex}
-                                isEditingMessage={isEditingMessage}
-                                editingMessageIndex={editingMessageIndex}
                                 input={input}
                                 setInput={setInput}
-                                setIsEditingMessage={setIsEditingMessage}
-                                setEditingMessageIndex={setEditingMessageIndex}
                                 setMessages={setMessages}
                                 append={append}
                                 reload={reload}
@@ -520,7 +514,7 @@ const ChatInterface = memo(({ initialChatId, initialMessages, initialVisibility 
                         (!user && selectedVisibilityType === 'private')
                     ) && (
                         <div
-                            className="fixed bottom-8 sm:bottom-4 left-0 right-0 w-full max-w-[26rem] sm:max-w-2xl mx-auto z-20"
+                            className="fixed bottom-8 sm:bottom-4 left-0 right-0 w-full max-w-[95%] sm:max-w-2xl mx-auto z-20"
                         >
                             <FormComponent
                                 chatId={chatId}
