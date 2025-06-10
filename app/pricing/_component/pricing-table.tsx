@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SEARCH_LIMITS } from "@/lib/constants";
 
 type SubscriptionDetails = {
   id: string;
@@ -144,11 +145,11 @@ export default function PricingTable({
               <ul className="space-y-4">
                 <li className="flex items-center text-[15px]">
                   <div className="w-1 h-1 bg-zinc-300 dark:bg-zinc-600 rounded-full mr-4 flex-shrink-0"></div>
-                  <span className="text-zinc-700 dark:text-zinc-300">150 normal searches per day</span>
+                  <span className="text-zinc-700 dark:text-zinc-300">{SEARCH_LIMITS.DAILY_SEARCH_LIMIT} normal searches per day</span>
                 </li>
                 <li className="flex items-center text-[15px]">
                   <div className="w-1 h-1 bg-zinc-300 dark:bg-zinc-600 rounded-full mr-4 flex-shrink-0"></div>
-                  <span className="text-zinc-700 dark:text-zinc-300">20 extreme searches per month</span>
+                  <span className="text-zinc-700 dark:text-zinc-300">{SEARCH_LIMITS.EXTREME_SEARCH_LIMIT} extreme searches per month</span>
                 </li>
                 <li className="flex items-center text-[15px]">
                   <div className="w-1 h-1 bg-zinc-300 dark:bg-zinc-600 rounded-full mr-4 flex-shrink-0"></div>
@@ -216,6 +217,10 @@ export default function PricingTable({
                   <li className="flex items-center text-[15px]">
                     <div className="w-1 h-1 bg-black dark:bg-white rounded-full mr-4 flex-shrink-0"></div>
                     <span className="text-zinc-700 dark:text-zinc-300">All AI models</span>
+                  </li>
+                  <li className="flex items-center text-[15px]">
+                    <div className="w-1 h-1 bg-black dark:bg-white rounded-full mr-4 flex-shrink-0"></div>
+                    <span className="text-zinc-700 dark:text-zinc-300">PDF document analysis</span>
                   </li>
                   <li className="flex items-center text-[15px]">
                     <div className="w-1 h-1 bg-black dark:bg-white rounded-full mr-4 flex-shrink-0"></div>
