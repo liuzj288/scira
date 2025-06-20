@@ -19,7 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { User } from '@/lib/db/schema';
 import { useSession } from '@/lib/auth-client';
 import { checkImageModeration } from '@/app/actions';
-import { Crown, LockIcon } from '@phosphor-icons/react';
+import { Crown, LockIcon, MicrophoneIcon } from '@phosphor-icons/react';
 import {
   Select,
   SelectContent,
@@ -181,6 +181,17 @@ const models = [
     pro: false,
   },
   {
+    value: 'scira-mistral',
+    label: 'Mistral Small',
+    description: "Mistral's small model",
+    vision: true,
+    reasoning: false,
+    experimental: false,
+    category: 'Mini',
+    pdf: true,
+    pro: false,
+  },
+  {
     value: 'scira-anthropic',
     label: 'Claude 4 Sonnet',
     description: "Anthropic's most advanced model",
@@ -325,8 +336,6 @@ const models = [
   },
 ];
 
-
-
 const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   selectedModel,
   setSelectedModel,
@@ -421,9 +430,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
           )}
         >
           <SelectValue asChild>
-            <span className="text-xs font-medium whitespace-nowrap">
-              {selectedModelData?.label || 'Select model'}
-            </span>
+            <span className="text-xs font-medium whitespace-nowrap">{selectedModelData?.label || 'Select model'}</span>
           </SelectValue>
         </SelectTrigger>
         <SelectContent
@@ -434,9 +441,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
         >
           {Object.entries(groupedModels).map(([category, categoryModels], categoryIndex) => (
             <SelectGroup key={category}>
-              {categoryIndex > 0 && (
-                <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
-              )}
+              {categoryIndex > 0 && <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />}
               <SelectLabel className="px-2 py-1 text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
                 {category} Models
               </SelectLabel>
@@ -638,7 +643,9 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
                 <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 dark:bg-neutral-500 mt-2 flex-shrink-0"></div>
                 <div>
                   <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Access better models</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Gemini 2.5 Flash Lite and GPT-4o Mini</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Gemini 2.5 Flash Lite and GPT-4o Mini
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -1013,9 +1020,7 @@ const SwitchNotification: React.FC<SwitchNotificationProps> = ({
               </span>
             )}
             <div className="flex flex-col items-start sm:flex-row sm:items-center sm:flex-wrap gap-x-1.5 gap-y-0.5">
-              <span className="font-semibold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100">
-                {title}
-              </span>
+              <span className="font-semibold text-xs sm:text-sm text-neutral-900 dark:text-neutral-100">{title}</span>
               <span className="text-[10px] sm:text-xs leading-tight text-neutral-600 dark:text-neutral-400">
                 {description}
               </span>
@@ -1170,7 +1175,7 @@ const SelectionContent = ({ selectedGroup, onGroupSelect, status, onExpandChange
   // Handle group selection and close expansion
   const handleGroupSelect = (group: SearchGroup, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the container's click handler
-    
+
     if (group.id === selectedGroup && !isExpanded) {
       // If clicking on the currently selected group when collapsed, expand instead
       setIsExpanded(true);
@@ -1181,7 +1186,7 @@ const SelectionContent = ({ selectedGroup, onGroupSelect, status, onExpandChange
     }
   };
 
-      return (
+  return (
     <motion.div
       ref={containerRef}
       layout={false}
@@ -1210,20 +1215,26 @@ const SelectionContent = ({ selectedGroup, onGroupSelect, status, onExpandChange
           {visibleGroups.map((group, index, filteredGroups) => {
             const showItem = (isExpanded && !isProcessing) || selectedGroup === group.id;
             const isLastItem = index === filteredGroups.length - 1;
+
+            // Only render if the item should be shown
+            if (!showItem) return null;
+
             return (
               <motion.div
                 key={group.id}
                 layout={false}
+                initial={{ width: 0, opacity: 0 }}
                 animate={{
-                  width: showItem ? '28px' : 0,
-                  opacity: showItem ? 1 : 0,
-                  marginRight: showItem && isLastItem && isExpanded ? '2px' : 0,
+                  width: '32px',
+                  opacity: 1,
+                  marginRight: isLastItem && isExpanded ? '2px' : 0,
                 }}
+                exit={{ width: 0, opacity: 0 }}
                 transition={{
                   duration: 0.15,
                   ease: 'easeInOut',
                 }}
-                className={cn('m-0!', isLastItem && isExpanded && showItem ? 'pr-0.5' : '')}
+                className={cn('flex-shrink-0', isLastItem && isExpanded ? 'pr-0.5' : '')}
               >
                 <ToolbarButton
                   group={group}
@@ -1301,6 +1312,66 @@ const FormComponent: React.FC<FormComponentProps> = ({
     notificationType: 'model',
     visibilityTimeout: undefined,
   });
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+
+  async function handleRecord() {
+    if (isRecording && mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        setMediaRecorder(recorder);
+
+        recorder.addEventListener('dataavailable', async (event) => {
+          if (event.data.size > 0) {
+            const audioBlob = event.data;
+
+            try {
+              const formData = new FormData();
+              formData.append('audio', audioBlob, 'recording.webm');
+              const response = await fetch('/api/transcribe', {
+                method: 'POST',
+                body: formData,
+              });
+
+              if (!response.ok) {
+                throw new Error(`Transcription failed: ${response.statusText}`);
+              }
+
+              const data = await response.json();
+
+              if (data.text) {
+                setInput(data.text);
+              } else {
+                console.error('Transcription response did not contain text:', data);
+              }
+            } catch (error) {
+              console.error('Error during transcription request:', error);
+            } finally {
+              setIsRecording(false);
+              setMediaRecorder(null);
+              stream.getTracks().forEach((track) => track.stop());
+            }
+          }
+        });
+
+        recorder.addEventListener('stop', () => {
+          stream.getTracks().forEach((track) => track.stop());
+        });
+
+        recorder.start();
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+        setIsRecording(false);
+      }
+    }
+  }
 
   const showSwitchNotification = (
     title: string,
@@ -2022,6 +2093,11 @@ const FormComponent: React.FC<FormComponentProps> = ({
         return;
       }
 
+      if (isRecording) {
+        toast.error('Please stop recording before submitting!');
+        return;
+      }
+
       // Check if user should bypass limits for this model
       const freeUnlimitedModels = ['scira-default', 'scira-vision'];
       const shouldBypassLimitsForThisModel = user && freeUnlimitedModels.includes(selectedModel);
@@ -2104,6 +2180,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
       event.preventDefault();
       if (status === 'submitted' || status === 'streaming') {
         toast.error('Please wait for the response to complete!');
+      } else if (isRecording) {
+        toast.error('Please stop recording before submitting!');
       } else {
         // Check if user should bypass limits for this model
         const freeUnlimitedModels = ['scira-default', 'scira-vision'];
@@ -2260,64 +2338,93 @@ const FormComponent: React.FC<FormComponentProps> = ({
             />
 
             <div className="rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200! dark:border-neutral-700! focus-within:border-neutral-300! dark:focus-within:border-neutral-500! transition-colors duration-200">
-              <Textarea
-                ref={inputRef}
-                placeholder={hasInteracted ? 'Ask a new question...' : 'Ask a question...'}
-                value={input}
-                onChange={handleInput}
-                disabled={isProcessing}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                onInput={(e) => {
-                  // Auto-resize textarea based on content
-                  const target = e.target as HTMLTextAreaElement;
+              {isRecording ? (
+                <Textarea
+                  ref={inputRef}
+                  placeholder=""
+                  value="◉ Recording..."
+                  disabled={true}
+                  className={cn(
+                    'w-full rounded-lg rounded-b-none md:text-base!',
+                    'text-base leading-relaxed',
+                    'bg-neutral-100 dark:bg-neutral-900',
+                    'border-0!',
+                    'text-neutral-600 dark:text-neutral-400', // Different text color for recording
+                    'focus:ring-0! focus-visible:ring-0!',
+                    'px-4! py-4!',
+                    'touch-manipulation',
+                    'whatsize',
+                    'text-center', // Center the recording text
+                    'cursor-not-allowed',
+                  )}
+                  style={{
+                    WebkitUserSelect: 'text',
+                    WebkitTouchCallout: 'none',
+                    minHeight: width && width < 768 ? '40px' : undefined,
+                    resize: 'none',
+                  }}
+                  rows={1}
+                />
+              ) : (
+                <Textarea
+                  ref={inputRef}
+                  placeholder={hasInteracted ? 'Ask a new question...' : 'Ask a question...'}
+                  value={input}
+                  onChange={handleInput}
+                  disabled={isProcessing}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                  onInput={(e) => {
+                    // Auto-resize textarea based on content
+                    const target = e.target as HTMLTextAreaElement;
 
-                  // Reset height to auto first to get the actual scroll height
-                  target.style.height = 'auto';
+                    // Reset height to auto first to get the actual scroll height
+                    target.style.height = 'auto';
 
-                  const scrollHeight = target.scrollHeight;
-                  const maxHeight = width && width < 768 ? 200 : 300; // Increased max height for desktop
+                    const scrollHeight = target.scrollHeight;
+                    const maxHeight = width && width < 768 ? 200 : 300; // Increased max height for desktop
 
-                  if (scrollHeight > maxHeight) {
-                    target.style.height = `${maxHeight}px`;
-                    target.style.overflowY = 'auto';
-                  } else {
-                    target.style.height = `${scrollHeight}px`;
-                    target.style.overflowY = 'hidden';
-                  }
-
-                  // Ensure the cursor position is visible by scrolling to bottom if needed
-                  requestAnimationFrame(() => {
-                    const cursorPosition = target.selectionStart;
-                    if (cursorPosition === target.value.length) {
-                      target.scrollTop = target.scrollHeight;
+                    if (scrollHeight > maxHeight) {
+                      target.style.height = `${maxHeight}px`;
+                      target.style.overflowY = 'auto';
+                    } else {
+                      target.style.height = `${scrollHeight}px`;
+                      target.style.overflowY = 'hidden';
                     }
-                  });
-                }}
-                className={cn(
-                  'w-full rounded-lg rounded-b-none md:text-base!',
-                  'text-base leading-relaxed',
-                  'bg-neutral-100 dark:bg-neutral-900',
-                  'border-0!',
-                  'text-neutral-900 dark:text-neutral-100',
-                  'focus:ring-0! focus-visible:ring-0!',
-                  'px-4! py-4!',
-                  'touch-manipulation',
-                  'whatsize',
-                )}
-                style={{
-                  WebkitUserSelect: 'text',
-                  WebkitTouchCallout: 'none',
-                  minHeight: width && width < 768 ? '40px' : undefined,
-                  resize: 'none',
-                }}
-                rows={1}
-                autoFocus={width ? width > 768 : true}
-                onCompositionStart={() => (isCompositionActive.current = true)}
-                onCompositionEnd={() => (isCompositionActive.current = false)}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-              />
+
+                    // Ensure the cursor position is visible by scrolling to bottom if needed
+                    requestAnimationFrame(() => {
+                      const cursorPosition = target.selectionStart;
+                      if (cursorPosition === target.value.length) {
+                        target.scrollTop = target.scrollHeight;
+                      }
+                    });
+                  }}
+                  className={cn(
+                    'w-full rounded-lg rounded-b-none md:text-base!',
+                    'text-base leading-relaxed',
+                    'bg-neutral-100 dark:bg-neutral-900',
+                    'border-0!',
+                    'text-neutral-900 dark:text-neutral-100',
+                    'focus:ring-0! focus-visible:ring-0!',
+                    'px-4! py-4!',
+                    'touch-manipulation',
+                    'whatsize',
+                  )}
+                  style={{
+                    WebkitUserSelect: 'text',
+                    WebkitTouchCallout: 'none',
+                    minHeight: width && width < 768 ? '40px' : undefined,
+                    resize: 'none',
+                  }}
+                  rows={1}
+                  autoFocus={width ? width > 768 : true}
+                  onCompositionStart={() => (isCompositionActive.current = true)}
+                  onCompositionEnd={() => (isCompositionActive.current = false)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                />
+              )}
 
               {/* Toolbar as a separate block - no absolute positioning */}
               <div
@@ -2484,6 +2591,64 @@ const FormComponent: React.FC<FormComponentProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {/* Voice Recording Button */}
+                  {!(isMobile && isGroupSelectorExpanded) &&
+                    (!isMobile ? (
+                      <Tooltip delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            className={cn(
+                              'rounded-full p-1.5 h-8 w-8 transition-colors duration-200',
+                              isRecording
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600',
+                            )}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              handleRecord();
+                            }}
+                            variant="outline"
+                            disabled={isProcessing}
+                          >
+                            <MicrophoneIcon size={14} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="bottom"
+                          sideOffset={6}
+                          className=" border-0 shadow-lg backdrop-blur-xs py-2 px-3"
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium text-[11px]">
+                              {isRecording ? 'Stop Recording' : 'Voice Input'}
+                            </span>
+                            <span className="text-[10px] text-neutral-300 dark:text-neutral-600 leading-tight">
+                              {isRecording ? 'Click to stop recording' : 'Record your voice message'}
+                            </span>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        className={cn(
+                          'rounded-full p-1.5 h-8 w-8 transition-colors duration-200',
+                          isRecording
+                            ? 'bg-red-500 hover:bg-red-600 text-white'
+                            : 'bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-600',
+                        )}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleRecord();
+                        }}
+                        variant="outline"
+                        disabled={isProcessing}
+                      >
+                        <MicrophoneIcon size={14} />
+                      </Button>
+                    ))}
+
                   {hasVisionSupport(selectedModel) &&
                     !(isMobile && isGroupSelectorExpanded) &&
                     (!isMobile ? (
@@ -2583,7 +2748,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
                             (input.length === 0 && attachments.length === 0) ||
                             uploadQueue.length > 0 ||
                             status !== 'ready' ||
-                            isLimitBlocked
+                            isLimitBlocked ||
+                            isRecording
                           }
                         >
                           <ArrowUpIcon size={14} />
@@ -2609,7 +2775,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
                         (input.length === 0 && attachments.length === 0) ||
                         uploadQueue.length > 0 ||
                         status !== 'ready' ||
-                        isLimitBlocked
+                        isLimitBlocked ||
+                        isRecording
                       }
                     >
                       <ArrowUpIcon size={14} />
