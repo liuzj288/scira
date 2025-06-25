@@ -47,6 +47,7 @@ import { auth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { geolocation } from '@vercel/functions';
 import { getTweet } from 'react-tweet/api';
+import { checkBotId } from 'botid/server';
 
 type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;
 type ResponseMessage = ResponseMessageWithoutId & { id: string };
@@ -311,6 +312,11 @@ const exa = new Exa(serverEnv.EXA_API_KEY);
 export async function POST(req: Request) {
   const { messages, model, group, timezone, id, selectedVisibilityType } = await req.json();
   const { latitude, longitude } = geolocation(req);
+  const verification = await checkBotId();
+
+  if (verification.isBot && !verification.isGoodBot) {
+    return new ChatSDKError('forbidden:api', 'Bot access denied').toResponse();
+  }
 
   console.log('--------------------------------');
   console.log('Location: ', latitude, longitude);
@@ -452,12 +458,12 @@ export async function POST(req: Request) {
         messages: convertToCoreMessages(messages),
         ...(model.includes('scira-qwq') || model.includes('scira-qwen-32b')
           ? {
-              temperature: 0.6,
-              topP: 0.95,
-            }
+            temperature: 0.6,
+            topP: 0.95,
+          }
           : {
-              temperature: 0,
-            }),
+            temperature: 0,
+          }),
         maxSteps: 5,
         maxRetries: 5,
         experimental_activeTools: [...activeTools],
@@ -473,30 +479,30 @@ export async function POST(req: Request) {
           openai: {
             ...(model === 'scira-o4-mini' || model === 'scira-o3'
               ? {
-                  reasoningEffort: 'medium',
-                  strictSchemas: true,
-                  reasoningSummary: 'detailed',
-                }
+                reasoningEffort: 'medium',
+                strictSchemas: true,
+                reasoningSummary: 'detailed',
+              }
               : {}),
             ...(model === 'scira-4o-mini'
               ? {
-                  parallelToolCalls: false,
-                  strictSchemas: true,
-                }
+                parallelToolCalls: false,
+                strictSchemas: true,
+              }
               : {}),
           } as OpenAIResponsesProviderOptions,
           xai: {
             ...(model === 'scira-default'
               ? {
-                  reasoningEffort: 'high',
-                }
+                reasoningEffort: 'high',
+              }
               : {}),
           },
           anthropic: {
             ...(model === 'scira-anthropic-thinking' || model === 'scira-opus-pro'
               ? {
-                  thinking: { type: 'enabled', budgetTokens: 12000 },
-                }
+                thinking: { type: 'enabled', budgetTokens: 12000 },
+              }
               : {}),
           },
         },
@@ -512,8 +518,8 @@ export async function POST(req: Request) {
                 .array(z.string())
                 .describe(
                   'The currency symbols for each stock/asset in the chart. Available symbols: ' +
-                    Object.keys(CURRENCY_SYMBOLS).join(', ') +
-                    '. Defaults to USD if not provided.',
+                  Object.keys(CURRENCY_SYMBOLS).join(', ') +
+                  '. Defaults to USD if not provided.',
                 ),
               interval: z
                 .enum(['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y', '10y', 'ytd', 'max'])
@@ -696,9 +702,8 @@ export async function POST(req: Request) {
                       try {
                         const { object } = await generateObject({
                           model: scira.languageModel('scira-g2'),
-                          prompt: `Complete the following financial report with an appropriate title. The report is about ${
-                            group.query
-                          } and contains this content: ${result.content.substring(0, 500)}...`,
+                          prompt: `Complete the following financial report with an appropriate title. The report is about ${group.query
+                            } and contains this content: ${result.content.substring(0, 500)}...`,
                           schema: z.object({
                             title: z.string().describe('A descriptive title for the financial report'),
                           }),
@@ -725,27 +730,26 @@ import pandas as pd
 from datetime import datetime
 
 ${stock_symbols
-  .map(
-    (symbol) =>
-      `${symbol.toLowerCase().replace('.', '')} = yf.download('${symbol}', period='${interval}', interval='1d')`,
-  )
-  .join('\n')}
+                  .map(
+                    (symbol) =>
+                      `${symbol.toLowerCase().replace('.', '')} = yf.download('${symbol}', period='${interval}', interval='1d')`,
+                  )
+                  .join('\n')}
 
 # Create the plot
 plt.figure(figsize=(10, 6))
 ${stock_symbols
-  .map(
-    (symbol) => `
+                  .map(
+                    (symbol) => `
 # Convert datetime64 index to strings to make it serializable
 ${symbol.toLowerCase().replace('.', '')}.index = ${symbol.toLowerCase().replace('.', '')}.index.strftime('%Y-%m-%d')
 plt.plot(${symbol.toLowerCase().replace('.', '')}.index, ${symbol
-      .toLowerCase()
-      .replace('.', '')}['Close'], label='${symbol} ${
-      formattedCurrencySymbols[stock_symbols.indexOf(symbol)]
-    }', color='blue')
+                        .toLowerCase()
+                        .replace('.', '')}['Close'], label='${symbol} ${formattedCurrencySymbols[stock_symbols.indexOf(symbol)]
+                      }', color='blue')
 `,
-  )
-  .join('\n')}
+                  )
+                  .join('\n')}
 
 # Customize the chart
 plt.title('${title}')
@@ -806,11 +810,11 @@ plt.show()`;
               const chart = execution.artifacts?.charts?.[0] ?? undefined;
               const chartData = chart
                 ? {
-                    type: chart.type,
-                    title: chart.title,
-                    elements: chart.elements,
-                    png: undefined,
-                  }
+                  type: chart.type,
+                  title: chart.title,
+                  elements: chart.elements,
+                  png: undefined,
+                }
                 : undefined;
 
               return {
@@ -916,14 +920,16 @@ print(f"Converted amount: {converted_amount}")
           x_search: tool({
             description: 'Search X (formerly Twitter) posts using xAI Live Search.',
             parameters: z.object({
-              query: z.string().describe('The search query for X posts'),
+              query: z.string().describe('The search query for X posts').nullable(),
               startDate: z
                 .string()
+                .nullable()
                 .describe(
                   'The start date of the search in the format YYYY-MM-DD (default to 7 days ago if not specified)',
                 ),
               endDate: z
                 .string()
+                .nullable()
                 .describe('The end date of the search in the format YYYY-MM-DD (default to today if not specified)'),
               xHandles: z
                 .array(z.string())
@@ -940,18 +946,18 @@ print(f"Converted amount: {converted_amount}")
               xHandles,
               maxResults = 15,
             }: {
-              query: string;
-              startDate: string;
-              endDate: string;
+              query: string | null;
+              startDate: string | null;
+              endDate: string | null;
               xHandles: string[] | null;
               maxResults: number | null;
             }) => {
               try {
                 const searchParameters: any = {
                   mode: 'on',
-                  from_date: startDate,
-                  to_date: endDate,
-                  max_search_results: maxResults! < 5 ? 5 : maxResults,
+                  ...(startDate && { from_date: startDate }),
+                  ...(endDate && { to_date: endDate }),
+                  ...(maxResults && { max_search_results: maxResults }),
                   return_citations: true,
                   sources: [
                     xHandles && xHandles.length > 0
@@ -970,8 +976,7 @@ print(f"Converted amount: {converted_amount}")
                     Authorization: `Bearer ${serverEnv.XAI_API_KEY}`,
                   },
                   body: JSON.stringify({
-                    model: 'grok-3-mini',
-                    temperature: 0.5,
+                    model: 'grok-3-latest',
                     messages: [
                       {
                         role: 'system',
@@ -979,7 +984,7 @@ print(f"Converted amount: {converted_amount}")
                       },
                       {
                         role: 'user',
-                        content: `${query}.`,
+                        content: `${query}`,
                       },
                     ],
                     search_parameters: searchParameters,
@@ -1160,34 +1165,34 @@ print(f"Converted amount: {converted_amount}")
                   })),
                   images: includeImageDescriptions
                     ? await Promise.all(
-                        deduplicateByDomainAndUrl(data.images).map(
-                          async ({ url, description }: { url: string; description?: string }) => {
-                            const sanitizedUrl = sanitizeUrl(url);
-                            const imageValidation = await isValidImageUrl(sanitizedUrl);
-                            return imageValidation.valid
-                              ? {
-                                  url: imageValidation.redirectedUrl || sanitizedUrl,
-                                  description: description ?? '',
-                                }
-                              : null;
-                          },
-                        ),
-                      ).then((results) =>
-                        results.filter(
-                          (image): image is { url: string; description: string } =>
-                            image !== null &&
-                            typeof image === 'object' &&
-                            typeof image.description === 'string' &&
-                            image.description !== '',
-                        ),
-                      )
-                    : await Promise.all(
-                        deduplicateByDomainAndUrl(data.images).map(async ({ url }: { url: string }) => {
+                      deduplicateByDomainAndUrl(data.images).map(
+                        async ({ url, description }: { url: string; description?: string }) => {
                           const sanitizedUrl = sanitizeUrl(url);
                           const imageValidation = await isValidImageUrl(sanitizedUrl);
-                          return imageValidation.valid ? imageValidation.redirectedUrl || sanitizedUrl : null;
-                        }),
-                      ).then((results) => results.filter((url) => url !== null) as string[]),
+                          return imageValidation.valid
+                            ? {
+                              url: imageValidation.redirectedUrl || sanitizedUrl,
+                              description: description ?? '',
+                            }
+                            : null;
+                        },
+                      ),
+                    ).then((results) =>
+                      results.filter(
+                        (image): image is { url: string; description: string } =>
+                          image !== null &&
+                          typeof image === 'object' &&
+                          typeof image.description === 'string' &&
+                          image.description !== '',
+                      ),
+                    )
+                    : await Promise.all(
+                      deduplicateByDomainAndUrl(data.images).map(async ({ url }: { url: string }) => {
+                        const sanitizedUrl = sanitizeUrl(url);
+                        const imageValidation = await isValidImageUrl(sanitizedUrl);
+                        return imageValidation.valid ? imageValidation.redirectedUrl || sanitizedUrl : null;
+                      }),
+                    ).then((results) => results.filter((url) => url !== null) as string[]),
                 };
               });
 
@@ -1760,11 +1765,11 @@ print(f"Converted amount: {converted_amount}")
               // map the chart to the correct format for the frontend and remove the png property
               const chartData = chart
                 ? {
-                    type: chart.type,
-                    title: chart.title,
-                    elements: chart.elements,
-                    png: undefined,
-                  }
+                  type: chart.type,
+                  title: chart.title,
+                  elements: chart.elements,
+                  png: undefined,
+                }
                 : undefined;
 
               await sandbox.delete();
@@ -1967,9 +1972,9 @@ print(f"Converted amount: {converted_amount}")
                       const a =
                         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                         Math.cos((lat1 * Math.PI) / 180) *
-                          Math.cos((lat2 * Math.PI) / 180) *
-                          Math.sin(dLon / 2) *
-                          Math.sin(dLon / 2);
+                        Math.cos((lat2 * Math.PI) / 180) *
+                        Math.sin(dLon / 2) *
+                        Math.sin(dLon / 2);
                       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                       const distance = R * c;
 
@@ -2583,7 +2588,7 @@ export async function GET(request: Request) {
   }
 
   const emptyDataStream = createDataStream({
-    execute: () => {},
+    execute: () => { },
   });
 
   const stream = await streamContext.resumableStream(recentStreamId, () => emptyDataStream);

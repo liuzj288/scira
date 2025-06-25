@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withBotId } from 'botid/next/config';
 import './env/server';
 import './env/client';
 
@@ -9,8 +10,8 @@ const nextConfig: NextConfig = {
     removeConsole:
       process.env.NODE_ENV === 'production'
         ? {
-            exclude: ['error'],
-          }
+          exclude: ['error'],
+        }
         : false,
   },
   experimental: {
@@ -20,7 +21,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
     staleTimes: {
-      dynamic: 30,
+      dynamic: 30, 
       static: 180,
     },
   },
@@ -161,4 +162,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBotId(nextConfig);
