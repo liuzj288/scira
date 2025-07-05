@@ -6,7 +6,15 @@ import { ChatRequestOptions, CreateMessage, Message } from 'ai';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
-import { models } from '@/ai/providers';
+import {
+  models,
+  requiresAuthentication,
+  requiresProSubscription,
+  hasVisionSupport,
+  hasPdfSupport,
+  getAcceptedFileTypes,
+  shouldBypassRateLimits,
+} from '@/ai/providers';
 import useWindowSize from '@/hooks/use-window-size';
 import { TelescopeIcon, X } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -54,6 +62,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
   user,
 }) => {
   const isProUser = subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active';
+  const isSubscriptionLoading = user && !subscriptionData;
 
   // Show all models to everyone, but control access via dialogs
   const availableModels = useMemo(() => {
@@ -88,10 +97,13 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
     const model = availableModels.find((m) => m.value === value);
     if (!model) return;
 
-    const isProModel = model.pro;
-    const canUseModel = !isProModel || isProUser;
-    const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
-    const requiresAuth = authRequiredModels.includes(model.value) && !user;
+    const requiresAuth = requiresAuthentication(model.value) && !user;
+    const requiresPro = requiresProSubscription(model.value) && !isProUser;
+
+    // Don't show dialogs if subscription is still loading
+    if (isSubscriptionLoading) {
+      return;
+    }
 
     // Check for authentication requirement first
     if (requiresAuth) {
@@ -100,8 +112,8 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
       return;
     }
 
-    // Then check for Pro requirement
-    if (!canUseModel) {
+    // Then check for Pro requirement - only if user is NOT Pro
+    if (requiresPro && !isProUser) {
       setSelectedProModel(model);
       setShowUpgradeDialog(true);
       return;
@@ -136,13 +148,13 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
           )}
         >
           <SelectValue asChild>
-            <span className="flex items-center group-active:[transform:translate3d(0,1px,0)]">
-              <Cpu className="size-3.5 text-neutral-600 dark:text-neutral-400" />
+            <span className="flex items-center justify-center group-active:[transform:translate3d(0,1px,0)]">
+              <Cpu className="size-4 text-neutral-600 dark:text-neutral-400" />
             </span>
           </SelectValue>
         </SelectTrigger>
         <SelectContent
-          className="w-[240px] p-1 font-sans rounded-xl bg-gradient-to-b from-white via-neutral-50 to-neutral-100 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 z-40 shadow-lg border border-neutral-200 dark:border-neutral-800 max-h-[280px] overflow-y-auto"
+          className="w-[240px] p-1 font-sans rounded-xl bg-white dark:bg-neutral-900 z-40 shadow-lg border border-neutral-200 dark:border-neutral-800 max-h-[280px] overflow-y-auto"
           align="start"
           side="bottom"
           sideOffset={4}
@@ -154,11 +166,9 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
                 {category} Models
               </SelectLabel>
               {categoryModels.map((model) => {
-                const isProModel = model.pro;
-                const canUseModel = !isProModel || isProUser;
-                const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
-                const requiresAuth = authRequiredModels.includes(model.value) && !user;
-                const isLocked = !canUseModel || requiresAuth;
+                const requiresAuth = requiresAuthentication(model.value) && !user;
+                const requiresPro = requiresProSubscription(model.value) && !isProUser;
+                const isLocked = requiresAuth || requiresPro;
 
                 if (isLocked) {
                   return (
@@ -170,10 +180,15 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
                         'opacity-50 hover:opacity-70 hover:bg-neutral-100 dark:hover:bg-neutral-800',
                       )}
                       onClick={() => {
+                        // Don't show dialogs if subscription is still loading
+                        if (isSubscriptionLoading) {
+                          return;
+                        }
+                        
                         if (requiresAuth) {
                           setSelectedAuthModel(model);
                           setShowSignInDialog(true);
-                        } else if (!canUseModel) {
+                        } else if (requiresPro && !isProUser) {
                           setSelectedProModel(model);
                           setShowUpgradeDialog(true);
                         }
@@ -211,9 +226,8 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = ({
                       <div className="font-medium truncate text-[11px] flex items-center gap-1">
                         {model.label}
                         {(() => {
-                          const authRequiredModels = ['scira-google-lite', 'scira-4o-mini'];
-                          const requiresAuth = authRequiredModels.includes(model.value) && !user;
-                          const requiresPro = isProModel && !isProUser;
+                          const requiresAuth = requiresAuthentication(model.value) && !user;
+                          const requiresPro = requiresProSubscription(model.value) && !isProUser;
 
                           if (requiresAuth) {
                             return <LockIcon className="size-3 text-neutral-400" />;
@@ -461,26 +475,11 @@ const fileToDataURL = (file: File): Promise<string> => {
   });
 };
 
-// Add this helper function near the top with other utility functions
-const supportsPdfAttachments = (modelValue: string): boolean => {
-  const selectedModel = models.find((model) => model.value === modelValue);
-  return selectedModel?.pdf === true;
-};
+// Removed local supportsPdfAttachments function - now use hasPdfSupport from providers
 
-// Update the hasVisionSupport function to check for PDF support
-const hasVisionSupport = (modelValue: string): boolean => {
-  const selectedModel = models.find((model) => model.value === modelValue);
-  return selectedModel?.vision === true;
-};
+// Removed local hasVisionSupport function - now imported from providers
 
-// Update the getAcceptFileTypes function to use pdf property and check Pro status
-const getAcceptFileTypes = (modelValue: string, isProUser: boolean): string => {
-  const selectedModel = models.find((model) => model.value === modelValue);
-  if (selectedModel?.pdf && isProUser) {
-    return 'image/*,.pdf';
-  }
-  return 'image/*';
-};
+// Removed local getAcceptFileTypes function - now imported from providers
 
 const truncateFilename = (filename: string, maxLength: number = 20) => {
   if (filename.length <= maxLength) return filename;
@@ -740,7 +739,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({ selectedGroup, onGroupSel
           >
             {selectedGroupData && (
               <>
-                <selectedGroupData.icon className={cn('size-3.5')} />
+                <selectedGroupData.icon className={cn('size-4')} />
                 {selectedGroupData.name}
               </>
             )}
@@ -748,7 +747,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({ selectedGroup, onGroupSel
         </SelectValue>
       </SelectTrigger>
       <SelectContent
-        className="w-[12em] p-1 font-sans rounded-xl bg-gradient-to-b from-white via-neutral-50 to-neutral-100 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-950 z-50 shadow-lg border border-neutral-200 dark:border-neutral-800 max-h-[240px] overflow-y-auto"
+        className="w-[12em] p-1 font-sans rounded-xl bg-white dark:bg-neutral-900 z-50 shadow-lg border border-neutral-200 dark:border-neutral-800 max-h-[240px] overflow-y-auto"
         align="start"
         side="bottom"
         sideOffset={4}
@@ -1035,7 +1034,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
       // Combine valid files
       let validFiles: File[] = [...imageFiles];
-      if (supportsPdfAttachments(selectedModel) || pdfFiles.length > 0) {
+      if (hasPdfSupport(selectedModel) || pdfFiles.length > 0) {
         validFiles = [...validFiles, ...pdfFiles];
       }
 
@@ -1280,7 +1279,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
       // Combine valid files
       let validFiles: File[] = [...imageFiles];
-      if (supportsPdfAttachments(selectedModel) || pdfFiles.length > 0) {
+      if (hasPdfSupport(selectedModel) || pdfFiles.length > 0) {
         validFiles = [...validFiles, ...pdfFiles];
       }
 
@@ -1351,7 +1350,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
         console.log('Switching to vision model:', visionModel);
         setSelectedModel(visionModel);
-
       }
 
       // Set upload queue immediately
@@ -1437,7 +1435,6 @@ const FormComponent: React.FC<FormComponentProps> = ({
       if (!currentModel?.vision) {
         const visionModel = getFirstVisionModel();
         setSelectedModel(visionModel);
-
       }
 
       // Use filtered files if we found oversized ones
@@ -1525,8 +1522,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
       }
 
       // Check if user should bypass limits for this model
-      const freeUnlimitedModels = ['scira-default', 'scira-vision'];
-      const shouldBypassLimitsForThisModel = user && freeUnlimitedModels.includes(selectedModel);
+      const shouldBypassLimitsForThisModel = shouldBypassRateLimits(selectedModel, user);
 
       if (isLimitBlocked && !shouldBypassLimitsForThisModel) {
         toast.error('Daily search limit reached. Please upgrade to Pro for unlimited searches.');
@@ -1608,8 +1604,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
         toast.error('Please stop recording before submitting!');
       } else {
         // Check if user should bypass limits for this model
-        const freeUnlimitedModels = ['scira-default', 'scira-vision'];
-        const shouldBypassLimitsForThisModel = user && freeUnlimitedModels.includes(selectedModel);
+        const shouldBypassLimitsForThisModel = shouldBypassRateLimits(selectedModel, user);
 
         if (isLimitBlocked && !shouldBypassLimitsForThisModel) {
           toast.error('Daily search limit reached. Please upgrade to Pro for unlimited searches.');
@@ -1700,7 +1695,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             ref={fileInputRef}
             multiple
             onChange={handleFileChange}
-            accept={getAcceptFileTypes(
+            accept={getAcceptedFileTypes(
               selectedModel,
               subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active',
             )}
@@ -1712,7 +1707,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             ref={postSubmitFileInputRef}
             multiple
             onChange={handleFileChange}
-            accept={getAcceptFileTypes(
+            accept={getAcceptedFileTypes(
               selectedModel,
               subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active',
             )}
@@ -1895,7 +1890,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           )}
                         >
                           <span className="group-active:[transform:translate3d(0,1px,0)] flex items-center gap-2">
-                            <TelescopeIcon className="h-3.5 w-3.5" />
+                            <TelescopeIcon className="h-4 w-4" />
                             <span className="hidden sm:block text-xs font-medium">Extreme</span>
                           </span>
                         </button>
@@ -1921,7 +1916,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <button
-                          className="group rounded-full p-2 h-8 w-8 border border-neutral-300 dark:border-neutral-700 bg-gradient-to-b from-neutral-50 via-neutral-100 to-neutral-200 dark:from-neutral-800 dark:via-neutral-900 dark:to-neutral-950 text-neutral-700 dark:text-neutral-300 shadow-[inset_0_1px_0px_0px_#ffffff] dark:shadow-[inset_0_1px_0px_0px_#525252] hover:from-neutral-100 hover:via-neutral-200 hover:to-neutral-300 dark:hover:from-neutral-700 dark:hover:via-neutral-800 dark:hover:to-neutral-900 active:[box-shadow:none] transition-all duration-200"
+                          className="group rounded-full p-1.75 h-8 w-8 border border-neutral-300 dark:border-neutral-700 bg-gradient-to-b from-neutral-50 via-neutral-100 to-neutral-200 dark:from-neutral-800 dark:via-neutral-900 dark:to-neutral-950 text-neutral-700 dark:text-neutral-300 shadow-[inset_0_1px_0px_0px_#ffffff] dark:shadow-[inset_0_1px_0px_0px_#525252] hover:from-neutral-100 hover:via-neutral-200 hover:to-neutral-300 dark:hover:from-neutral-700 dark:hover:via-neutral-800 dark:hover:to-neutral-900 active:[box-shadow:none] transition-all duration-200"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -1929,7 +1924,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           }}
                         >
                           <span className="block group-active:[transform:translate3d(0,1px,0)]">
-                            <PaperclipIcon size={14} />
+                            <PaperclipIcon size={16} />
                           </span>
                         </button>
                       </TooltipTrigger>
@@ -1941,9 +1936,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                         <div className="flex flex-col gap-0.5">
                           <span className="font-medium text-[11px]">Attach File</span>
                           <span className="text-[10px] text-neutral-300 dark:text-neutral-600 leading-tight">
-                            {supportsPdfAttachments(selectedModel)
-                              ? 'Upload an image or PDF document'
-                              : 'Upload an image'}
+                            {hasPdfSupport(selectedModel) ? 'Upload an image or PDF document' : 'Upload an image'}
                           </span>
                         </div>
                       </TooltipContent>
@@ -1954,7 +1947,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <button
-                          className="group rounded-full p-2 h-8 w-8 border border-red-600 bg-gradient-to-b from-red-400 via-red-500 to-red-600 text-neutral-50 shadow-[inset_0_1px_0px_0px_#fca5a5] hover:from-red-600 hover:via-red-600 hover:to-red-600 active:[box-shadow:none] transition-all duration-200"
+                          className="group rounded-full p-1.75 h-8 w-8 border border-red-600 bg-gradient-to-b from-red-400 via-red-500 to-red-600 text-neutral-50 shadow-[inset_0_1px_0px_0px_#fca5a5] hover:from-red-600 hover:via-red-600 hover:to-red-600 active:[box-shadow:none] transition-all duration-200"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -1962,7 +1955,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           }}
                         >
                           <span className="block group-active:[transform:translate3d(0,1px,0)]">
-                            <StopIcon size={14} />
+                            <StopIcon size={16} />
                           </span>
                         </button>
                       </TooltipTrigger>
@@ -1980,7 +1973,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                       <TooltipTrigger asChild>
                         <button
                           className={cn(
-                            'group rounded-full p-2 h-8 w-8 backdrop-blur-2xl transition-all duration-200',
+                            'group rounded-full p-1.75 h-8 w-8 backdrop-blur-2xl transition-all duration-200',
                             isRecording
                               ? 'border border-red-600 bg-gradient-to-b from-red-400 via-red-500 to-red-600 text-white shadow-[inset_0_1px_0px_0px_#fca5a5] hover:from-red-600 hover:via-red-600 hover:to-red-600 active:[box-shadow:none]'
                               : 'border border-zinc-600 bg-gradient-to-b from-zinc-400 via-zinc-500 to-zinc-600 text-neutral-50 shadow-[inset_0_1px_0px_0px_#a1a1aa] hover:from-zinc-600 hover:via-zinc-600 hover:to-zinc-600 active:[box-shadow:none]',
@@ -1992,7 +1985,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           }}
                         >
                           <span className="block group-active:[transform:translate3d(0,1px,0)]">
-                            <MicrophoneIcon size={14} />
+                            <MicrophoneIcon size={16} />
                           </span>
                         </button>
                       </TooltipTrigger>
@@ -2016,7 +2009,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <button
-                          className="group rounded-full flex p-2 m-auto h-8 w-8 border border-zinc-600 bg-gradient-to-b from-zinc-400 via-zinc-500 to-zinc-600 text-neutral-50 shadow-[inset_0_1px_0px_0px_#a1a1aa] hover:from-zinc-600 hover:via-zinc-600 hover:to-zinc-600 active:[box-shadow:none] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-zinc-400 disabled:hover:via-zinc-500 disabled:hover:to-zinc-600 transition-all duration-200"
+                          className="group rounded-full flex p-1.75 m-auto h-8 w-8 border border-zinc-600 bg-gradient-to-b from-zinc-400 via-zinc-500 to-zinc-600 text-neutral-50 shadow-[inset_0_1px_0px_0px_#a1a1aa] hover:from-zinc-600 hover:via-zinc-600 hover:to-zinc-600 active:[box-shadow:none] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-zinc-400 disabled:hover:via-zinc-500 disabled:hover:to-zinc-600 transition-all duration-200"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -2031,7 +2024,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           }
                         >
                           <span className="block group-active:[transform:translate3d(0,1px,0)]">
-                            <ArrowUpIcon size={14} />
+                            <ArrowUpIcon size={16} />
                           </span>
                         </button>
                       </TooltipTrigger>
