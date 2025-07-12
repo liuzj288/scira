@@ -38,7 +38,6 @@ import { Chat, CustomInstructions } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { geolocation } from '@vercel/functions';
-import { checkRateLimit } from '@vercel/firewall';
 
 // Import all tools from the organized tool files
 import {
@@ -102,15 +101,7 @@ function getStreamContext() {
 
 export async function POST(req: Request) {
   console.log('🔍 Search API endpoint hit');
-
-  if (process.env.NODE_ENV === 'production') {
-    const { rateLimited } = await checkRateLimit('scira', { request: req, firewallHostForDevelopment: 'https://scira.ai' });
-
-    if (rateLimited) {
-      return new ChatSDKError('rate_limit:chat', 'Global search limit reached. Try again in a minute.').toResponse();
-    }
-  }
-
+  
   const requestStartTime = Date.now();
   const { messages, model, group, timezone, id, selectedVisibilityType } = await req.json();
   const { latitude, longitude } = geolocation(req);
