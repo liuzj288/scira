@@ -124,13 +124,15 @@ const UserProfile = memo(
                     className={cn('p-0! m-0!', signingOut && 'animate-pulse', className)}
                     asChild
                   >
-                    <Avatar className="size-7">
+                    <Avatar className="size-7 rounded-md border border-neutral-200 dark:border-neutral-700">
                       <AvatarImage
                         src={currentUser?.image ?? ''}
                         alt={currentUser?.name ?? ''}
-                        className="rounded-full"
+                        className="rounded-md p-0 m-0 size-7"
                       />
-                      <AvatarFallback className="rounded-full text-sm">{currentUser?.name?.charAt(0)}</AvatarFallback>
+                      <AvatarFallback className="rounded-md text-sm p-0 m-0 size-7">
+                        {currentUser?.name?.charAt(0)}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 ) : (
@@ -152,13 +154,15 @@ const UserProfile = memo(
             {isAuthenticated ? (
               <div className="p-3">
                 <div className="flex items-center gap-2">
-                  <Avatar className="size-8 shrink-0">
+                  <Avatar className="size-8 shrink-0 rounded-md border border-neutral-200 dark:border-neutral-700">
                     <AvatarImage
                       src={currentUser?.image ?? ''}
                       alt={currentUser?.name ?? ''}
-                      className="rounded-full"
+                      className="rounded-md p-0 m-0 size-8"
                     />
-                    <AvatarFallback className="rounded-full">{currentUser?.name?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="rounded-md p-0 m-0 size-8">
+                      {currentUser?.name?.charAt(0)}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col min-w-0">
                     <p className="font-medium text-sm leading-none truncate">{currentUser?.name}</p>
@@ -188,8 +192,8 @@ const UserProfile = memo(
             ) : (
               <div className="p-3">
                 <div className="flex items-center gap-2">
-                  <Avatar className="size-8 shrink-0">
-                    <AvatarFallback className="rounded-full">
+                  <Avatar className="size-8 shrink-0 rounded-md border border-neutral-200 dark:border-neutral-700">
+                    <AvatarFallback className="rounded-md">
                       <UserCircle size={18} />
                     </AvatarFallback>
                   </Avatar>
