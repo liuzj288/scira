@@ -3,19 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { useState, memo, useCallback, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import {
-  Plus,
-  Globe,
-  GlobeHemisphereWest,
-  Lock,
-  Copy,
-  Check,
-  Crown,
-  Lightning,
-  Eye,
-  DotsThree,
-  Share,
-} from '@phosphor-icons/react';
+import { Plus, GlobeHemisphereWest, Lock, Copy, Check, Crown, Lightning, Share } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { UserProfile } from '@/components/user-profile';
@@ -73,7 +61,7 @@ const Navbar = memo(
     const [privateDropdownOpen, setPrivateDropdownOpen] = useState(false);
     const [isChangingVisibility, setIsChangingVisibility] = useState(false);
     const router = useRouter();
-    
+
     // Use fast pro status hook for immediate UI response
     const { isProUser: fastProStatus, isLoading: fastProLoading } = useFastProStatus();
 
@@ -138,8 +126,8 @@ const Navbar = memo(
           isDialogOpen
             ? 'bg-transparent pointer-events-none'
             : status === 'streaming' || status === 'ready'
-            ? 'bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60'
-            : 'bg-background',
+              ? 'bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60'
+              : 'bg-background',
         )}
       >
         <div className={cn('flex items-center gap-3', isDialogOpen ? 'pointer-events-auto' : '')}>
@@ -155,6 +143,28 @@ const Navbar = memo(
             </Button>
           </Link>
         </div>
+
+        {/* Centered Upgrade Button */}
+        {user && !hasActiveSubscription && !showProLoading && (
+          <div
+            className={cn(
+              'flex items-center justify-center absolute left-1/2 transform -translate-x-1/2',
+              isDialogOpen ? 'pointer-events-auto' : '',
+            )}
+          >
+            <div className="flex items-center bg-muted/50 rounded-lg border border-border">
+              <span className="px-2 py-1.5 text-sm font-medium text-muted-foreground">Free Plan</span>
+              <Button
+                variant="default"
+                size="sm"
+                className="rounded-md mr-1.5 h-6"
+                onClick={() => router.push('/pricing')}
+              >
+                Upgrade
+              </Button>
+            </div>
+          </div>
+        )}
         <div className={cn('flex items-center gap-2', isDialogOpen ? 'pointer-events-auto' : '')}>
           {/* Visibility indicator or toggle based on authentication and ownership */}
           {chatId && (
@@ -405,7 +415,7 @@ const Navbar = memo(
             </>
           )}
 
-          {/* Subscription Status - show loading or actual status */}
+          {/* Subscription Status - show loading or Pro status only */}
           {user && (
             <>
               {showProLoading ? (
@@ -420,37 +430,18 @@ const Navbar = memo(
                     Loading subscription status...
                   </TooltipContent>
                 </Tooltip>
-              ) : subscriptionData ? (
-                hasActiveSubscription ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="rounded-md pointer-events-auto flex items-center gap-1.5 p-1.5 bg-muted/50 border border-border">
-                        <Crown size={14} className="text-foreground" />
-                        <span className="text-xs font-medium text-foreground hidden sm:inline">Pro</span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={4}>
-                      Pro Subscribed - Unlimited access
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="pointer-events-auto p-0 px-1"
-                        onClick={() => router.push('/pricing')}
-                      >
-                        <Lightning size={16} />
-                        <span className="text-sm font-medium hidden sm:inline ml-1">Upgrade</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={4}>
-                      Upgrade to Pro for unlimited searches
-                    </TooltipContent>
-                  </Tooltip>
-                )
+              ) : subscriptionData && hasActiveSubscription ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="rounded-md pointer-events-auto flex items-center gap-1.5 p-1.5 bg-muted/50 border border-border">
+                      <Crown size={14} className="text-foreground" />
+                      <span className="text-xs font-medium text-foreground hidden sm:inline">Pro</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={4}>
+                    Pro Subscribed - Unlimited access
+                  </TooltipContent>
+                </Tooltip>
               ) : null}
             </>
           )}
