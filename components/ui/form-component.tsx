@@ -1818,7 +1818,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
             'relative w-full flex flex-col gap-1 rounded-lg transition-all duration-300 font-sans!',
             hasInteracted ? 'z-51' : '',
             isDragging && 'ring-1 ring-border',
-            // attachments.length > 0 || uploadQueue.length > 0 ? 'bg-muted/70 p-1' : 'bg-transparent',
+            attachments.length > 0 || uploadQueue.length > 0 ? 'bg-muted/50 p-1' : 'bg-transparent',
           )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -2054,7 +2054,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <button
-                          className="group rounded-lg p-1.75 h-8 w-8 border border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors duration-200"
+                          className="group rounded-lg p-1.5 size-7.5 border border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors duration-200"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -2116,7 +2116,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <button
-                          className="group rounded-lg flex p-1.75 m-auto h-8 w-8 border border-primary bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary transition-colors duration-200"
+                          className="group rounded-lg flex p-1.5 m-auto size-7.5 border border-primary bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary transition-colors duration-200"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
