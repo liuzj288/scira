@@ -332,7 +332,6 @@ export async function POST(req: Request) {
               ? {
                 temperature: 0.7,
                 topP: 0.8,
-                topK: 20,
                 minP: 0,
                 presencePenalty: 1.5,
               }
@@ -360,7 +359,7 @@ export async function POST(req: Request) {
                 reasoningEffort: model === 'scira-5-high' ? 'high' : 'low',
                 reasoningSummary: model === 'scira-5-high' ? 'detailed' : 'auto',
                 parallelToolCalls: false,
-                strictJsonSchema: true,
+                strictJsonSchema: false,
                 serviceTier: 'flex',
                 textVerbosity: "medium"
               }
