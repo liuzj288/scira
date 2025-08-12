@@ -231,7 +231,9 @@ const ChatInterface = memo(
       experimental_throttle: selectedModelRef.current === 'scira-anthropic' ? 1000 : 100,
       onData: (dataPart) => {
         console.log('onData<Client>', dataPart);
-        setDataStream((ds) => (ds ? [...ds, dataPart as DataUIPart<CustomUIDataTypes>] : []));
+        setDataStream((ds) => {
+          return [...ds, dataPart as DataUIPart<CustomUIDataTypes>];
+        });
       },
       onFinish: async ({ message }) => {
         console.log('onFinish<Client>', message.parts);
@@ -352,6 +354,11 @@ const ChatInterface = memo(
           parts: [{ type: 'text', text: initialState.query }],
           role: 'user',
         });
+        if (user && chatId) {
+          setTimeout(() => {
+            window.history.replaceState({}, '', `/search/${chatId}`);
+          }, 10000);
+        }
       }
     }, [initialState.query, sendMessage, setInput, messages.length, initialChatId]);
 
