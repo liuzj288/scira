@@ -168,6 +168,11 @@ export async function POST(req: Request) {
             parts: userMessage.parts,
             attachments: [],
             createdAt: new Date(),
+            model: 'scira-grok-4',
+            completionTime: null,
+            inputTokens: null,
+            outputTokens: null,
+            totalTokens: null,
           },
         ],
       }),
@@ -183,6 +188,8 @@ export async function POST(req: Request) {
     // Create data stream with execute function
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
+        const streamStartTime = Date.now();
+
         // Start streaming
         const result = streamText({
           model: scira.languageModel('scira-grok-4'),
@@ -458,6 +465,19 @@ export async function POST(req: Request) {
         dataStream.merge(
           result.toUIMessageStream({
             sendReasoning: true,
+            messageMetadata({ part }) {
+              if (part.type === 'finish') {
+                console.log('Finish part: ', part);
+                const processingTime = (Date.now() - streamStartTime) / 1000;
+                return {
+                  model: 'scira-grok-4',
+                  completionTime: processingTime,
+                  inputTokens: part.totalUsage.inputTokens,
+                  outputTokens: part.totalUsage.outputTokens,
+                  totalTokens: part.totalUsage.totalTokens,
+                };
+              }
+            },
           }),
         );
       },
@@ -480,6 +500,11 @@ export async function POST(req: Request) {
                 createdAt: new Date(),
                 attachments: [],
                 chatId: chatId,
+                model: 'scira-grok-4',
+                completionTime: null,
+                inputTokens: null,
+                outputTokens: null,
+                totalTokens: null,
               })),
             });
           } else {
