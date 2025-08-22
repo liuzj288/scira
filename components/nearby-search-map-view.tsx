@@ -57,7 +57,7 @@ interface NearbySearchMapViewProps {
   center: {
     lat: number;
     lng: number;
-  };
+  } | null;
   places: Place[];
   type: string;
   query?: string;
@@ -75,10 +75,10 @@ const NearbySearchMapView = memo<NearbySearchMapViewProps>(
     // Memoize center to prevent object recreation
     const memoizedCenter = React.useMemo(
       () => ({
-        lat: center.lat,
-        lng: center.lng,
+        lat: center?.lat || 0,
+        lng: center?.lng || 0,
       }),
-      [center.lat, center.lng],
+      [center?.lat, center?.lng],
     );
 
     // Memoize normalized places to prevent unnecessary recalculations
@@ -279,6 +279,15 @@ const NearbySearchMapView = memo<NearbySearchMapViewProps>(
         commitIndexForMap(0); // ensures map zooms to first place by default
       }
     }, [normalizedPlaces, selectedPlace, commitIndexForMap]);
+
+    // Handle null center case after all hooks are declared
+    if (!center) {
+      return (
+        <div className="p-4 text-center text-neutral-600 dark:text-neutral-400">
+          <p>Unable to display map: Location data unavailable</p>
+        </div>
+      );
+    }
 
     return (
       <div
@@ -500,6 +509,19 @@ const NearbySearchMapView = memo<NearbySearchMapViewProps>(
   },
   (prevProps, nextProps) => {
     // Custom comparison function to prevent unnecessary re-renders
+    // Handle null center values
+    if (prevProps.center === null && nextProps.center === null) {
+      return (
+        prevProps.type === nextProps.type &&
+        prevProps.places.length === nextProps.places.length &&
+        prevProps.places.every((place, index) => place.place_id === nextProps.places[index]?.place_id)
+      );
+    }
+
+    if (prevProps.center === null || nextProps.center === null) {
+      return false;
+    }
+
     return (
       prevProps.center.lat === nextProps.center.lat &&
       prevProps.center.lng === nextProps.center.lng &&
