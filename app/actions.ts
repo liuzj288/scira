@@ -12,7 +12,7 @@ import { scira } from '@/ai/providers';
 import {
   getChatsByUserId,
   deleteChatById,
-  updateChatVisiblityById,
+  updateChatVisibilityById,
   getChatById,
   getMessageById,
   deleteMessagesByChatIdAfterTimestamp,
@@ -236,6 +236,7 @@ const groupInstructions = {
   - ⚠️ URGENT: RUN THE APPROPRIATE TOOL INSTANTLY when user sends ANY message - NO EXCEPTIONS
   - ⚠️ URGENT: Always respond with markdown format!!
   - ⚠️ IMP: Never run more than 1 tool in a single response cycle!!
+  - ⚠️ IMP: As soon as you have the tool results, respond with the results in markdown format!
   - Read and think about the response guidelines before writing the response
   - EVEN IF THE USER QUERY IS AMBIGUOUS OR UNCLEAR, YOU MUST STILL RUN THE TOOL IMMEDIATELY
   - NEVER ask for clarification before running the tool - run first, clarify later if needed
@@ -853,6 +854,7 @@ const groupInstructions = {
 
   ### CRITICAL INSTRUCTION: (MUST FOLLOW AT ALL COSTS!!!)
   - ⚠️ URGENT: Run extreme_search tool INSTANTLY when user sends ANY message - NO EXCEPTIONS
+  - ⚠️ IMP: As soon as you have the tool results, respond with the results in markdown format!
   - DO NOT WRITE A SINGLE WORD before running the tool
   - Run the tool with the exact user query immediately on receiving it
   - EVEN IF THE USER QUERY IS AMBIGUOUS OR UNCLEAR, YOU MUST STILL RUN THE TOOL IMMEDIATELY
@@ -1072,13 +1074,33 @@ export async function deleteChat(chatId: string) {
 export async function updateChatVisibility(chatId: string, visibility: 'private' | 'public') {
   'use server';
 
-  if (!chatId) return null;
+  console.log('🔄 updateChatVisibility called with:', { chatId, visibility });
+
+  if (!chatId) {
+    console.error('❌ updateChatVisibility: No chatId provided');
+    throw new Error('Chat ID is required');
+  }
 
   try {
-    return await updateChatVisiblityById({ chatId, visibility });
+    console.log('📡 Calling updateChatVisibilityById with:', { chatId, visibility });
+    const result = await updateChatVisibilityById({ chatId, visibility });
+    console.log('✅ updateChatVisibilityById successful, result:', result);
+
+    // Return a serializable plain object instead of raw database result
+    return {
+      success: true,
+      chatId,
+      visibility,
+      rowCount: result?.rowCount || 0,
+    };
   } catch (error) {
-    console.error('Error updating chat visibility:', error);
-    return null;
+    console.error('❌ Error in updateChatVisibility:', {
+      chatId,
+      visibility,
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
   }
 }
 
