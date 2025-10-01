@@ -3,7 +3,6 @@ import { wrapLanguageModel, customProvider, extractReasoningMiddleware, gateway 
 import { createOpenAI } from '@ai-sdk/openai';
 import { xai } from '@ai-sdk/xai';
 import { groq } from '@ai-sdk/groq';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import { mistral } from '@ai-sdk/mistral';
 import { google } from '@ai-sdk/google';
 import { createGatewayProvider } from '@ai-sdk/gateway';
@@ -57,7 +56,7 @@ export const scira = customProvider({
     'scira-gpt5': gateway('openai/gpt-5'),
     'scira-gpt5-mini': gateway('openai/gpt-5-mini'),
     'scira-gpt5-nano': gateway('openai/gpt-5-nano'),
-    'scira-gp5-codex': gateway('openai/gpt-5-codex'),
+    'scira-gpt5-codex': gateway('openai/gpt-5-codex'),
     'scira-o3': gateway('openai/o3'),
     'scira-qwen-32b': wrapLanguageModel({
       model: groq('qwen/qwen3-32b'),
@@ -102,7 +101,7 @@ export const scira = customProvider({
       model: huggingface.chat('zai-org/GLM-4.6:zai-org'),
       middleware,
     }),
-    'scira-kimi-k2-v2': gateway('moonshotai/kimi-k2-0905'),
+    'scira-kimi-k2-v2': gateway('moonshotai/kimi-k2-turbo'),
     'scira-haiku': anthropic('claude-3-5-haiku-20241022'),
     'scira-mistral-medium': mistral('mistral-medium-2508'),
     'scira-magistral-small': mistral('magistral-small-2509'),
@@ -419,7 +418,7 @@ export const models: Model[] = [
     isNew: true,
   },
   {
-    value: 'scira-gp5-codex',
+    value: 'scira-gpt5-codex',
     label: 'GPT 5 Codex',
     description: "OpenAI's advanced coding LLM",
     vision: true,
@@ -452,7 +451,7 @@ export const models: Model[] = [
   },
   {
     value: 'scira-deepseek-chat',
-    label: 'DeepSeek Chat',
+    label: 'DeepSeek 3.2 Exp',
     description: "DeepSeek's advanced chat LLM",
     vision: false,
     reasoning: false,
@@ -467,7 +466,7 @@ export const models: Model[] = [
   },
   {
     value: 'scira-deepseek-chat-think',
-    label: 'DeepSeek Chat Thinking',
+    label: 'DeepSeek 3.2 Exp Thinking',
     description: "DeepSeek's advanced chat LLM with thinking",
     vision: false,
     reasoning: true,
