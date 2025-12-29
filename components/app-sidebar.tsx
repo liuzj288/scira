@@ -22,7 +22,7 @@ import {
   WrenchIcon,
   UsersIcon,
 } from '@phosphor-icons/react';
-import { Crown02Icon, BinocularsIcon, SearchList02Icon } from '@hugeicons/core-free-icons';
+import { Crown02Icon, BinocularsIcon, SearchList02Icon, LibrariesIcon, FolderLibraryIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@/components/ui/hugeicons';
 import {
   RocketIcon as VercelIcon,
@@ -340,7 +340,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                     <SidebarTrigger className="size-8" />
                   </TooltipTrigger>
                   <TooltipContent side="right" align="center" hidden={state !== 'expanded' || isMobile}>
-                    Close Sidebar
+                    Close Sidebar <span className='text-xs text-secondary pl-0.5'>⌘B</span>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -353,6 +353,7 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
                   </TooltipTrigger>
                   <TooltipContent side="right" align="center" hidden={state !== 'collapsed' || isMobile}>
                     Open Sidebar
+                    <span className='text-xs text-secondary pl-1'>⌘B</span>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -382,6 +383,29 @@ export const AppSidebar = memo(({ user, onHistoryClick, isProUser }: AppSidebarP
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+
+          {user && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Search Library"
+                className={cn(
+                  'hover:bg-primary/10',
+                  pathname === '/searches' || pathname?.startsWith('/searches/') ? 'bg-primary/12 text-foreground' : '',
+                )}
+              >
+                <Link
+                  prefetch={true}
+                  href="/searches"
+                  onClick={closeMobileSidebar}
+                  className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full"
+                >
+                  <HugeiconsIcon icon={FolderLibraryIcon} size={18} />
+                  <span className="group-data-[collapsible=icon]:hidden">Search Library</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
 
           {/* Lookout - Standalone Item (requires auth) */}
           {user && (

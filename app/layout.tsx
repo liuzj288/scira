@@ -131,7 +131,7 @@ const baumans = Baumans({
   weight: ['400'],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -144,7 +144,7 @@ export default function RootLayout({
       >
         <NuqsAdapter>
           <Providers>
-            <SidebarProvider defaultOpen={true}>
+            <SidebarProvider>
               <Toaster position="top-center" />
               {children}
             </SidebarProvider>
